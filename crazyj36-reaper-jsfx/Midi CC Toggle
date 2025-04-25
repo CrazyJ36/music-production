@@ -25,7 +25,6 @@ last_value = 0;
 ext_noinit = 1;
 
 @block
-
 while (
   midirecv(mpos, msg1, msg2, msg3) ? (
     // if last_value is 0 on midi receive, send 127, and vice versa.
