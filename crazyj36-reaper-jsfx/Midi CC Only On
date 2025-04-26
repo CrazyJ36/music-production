@@ -22,7 +22,6 @@ ext_noinit = 1;
 @block
 
 while (midirecv(offset, msg1, msg2, msg3) ? (
-    midisend(offset, msg1, msg2, 0);
     midisend(offset, msg1, msg2, 127);
   );
 );
