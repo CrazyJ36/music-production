@@ -1,34 +1,54 @@
 /*
-For M-Vave Chocolate 'Program Change C' mode, toggles any CCs that your enter into the plugin.
+NOT DONE! For M-Vave Chocolate 'Program Change C' mode, toggles any CCs that your enter into the plugin.
 */
 desc:MIDI CC Toggles for M-Vave Chocolate (CrazyJ36)
 
-// sliderNum:variable=default_val<min, max, inc{val1, val2}>in_fx_text
-// using {val1, val2} shows as list, exclude for slider.
-slider1:number_of_controls=3<0,127,1{1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114,115,116,117,118,119,120,121,122,123,124,125,126,127,128}>Number of controls
-slider2:cc=0<0,127,1>CC for above
+
+// slierNum:variable=default_val<min, max, inc{val1, val2}>in_fx_text. Using {val1, val2} shows as list, exclude for slider.
+slider1:channel=1<1,16,1>Midi Channel
+slider2:cc=0<0,127,1>CC to toggle
+slider3:onOff=0<0,1,1{Off,On}>On/Off
 
 in_pin:none
 out_pin:none
 
-last_value = 0;
-
-@init
-ext_noinit = 1;
+lastMidiSignal = 0
 
 @gfx
 gfx_set(255);
 gfx_x = 1;
 gfx_y = 1;
-gfx_printf("Number of controls: %d, CC: %d", number_of_controls, cc);
+gfx_printf("selected cc: %d, selected status: %d\n", selectedCC, selectedStatus);
+gfx_x = 1;
+gfx_printf("cc[0] status: %d, cc[1] status:%d ", cc[0], cc[1]);
+
+
+@init
+cc = [];
+
+@slider
+selectedCC = slider(2);
+selectedStatus = slider(3);
+
+x = 0;
+while (x < 2) (
+  selectedCC == x ? (
+    cc[x] = selectedStatus;
+  );
+  x += 1;
+)
+
 
 @block
+
 while (midirecv(offset, msg1, msg2, msg3)) (
-    last_value ? (
-      last_value = 0;
-      midisend(mpos, msg1, msg2, last_value);
-    ) : ( 
-      last_value = 127;
-      midisend(mpos, msg1, msg2, last_value);
-    );
+  // if lastMidiSignal is non-zero.
+  lastMidiSignal ? ( 
+    midisend(mpos, msg1, msg2, 0);
+  ) : ( 
+    midisend(mpos, msg1, msg2, 127);
+  );
+    
 );
+
+
