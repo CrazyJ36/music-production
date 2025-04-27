@@ -17,8 +17,10 @@ lastMidiSignal = 0;
 ccLimit = 3;
 a = 0;
 while (a < ccLimit) (
-  lastStatusForCC[a] = 1;
+  lastStatusForCC[a] = 0;
+  a += 1;
 );
+lastStatusForCC[0] = 1;
 
 @gfx
 gfx_set(255);
@@ -34,8 +36,9 @@ while (k < ccLimit) (
 i = 0;
 while (i < ccLimit) (
   slider(2) == i ? (
-    //slider(3) = file_var(0, lastStatusForCC[i]);
-    slider(3) = lastStatusForCC[i];
+    slider(3) = file_var(0, lastStatusForCC[i]);
+    //slider(3) = lastStatusForCC[i];
+ 
   );
   i += 1;
 );
@@ -44,8 +47,8 @@ while (i < ccLimit) (
 j = 0;
 while (j < ccLimit) (
   slider(2) == j ? (
-    //file_var(0, lastStatusForCC[j]);
-    lastStatusForCC[j] = slider(3);
+    file_var(0, lastStatusForCC[j]);
+    //lastStatusForCC[j] = slider(3);
   );
   j += 1;
 );
