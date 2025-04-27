@@ -1,5 +1,5 @@
 /*
-NOT DONE! For M-Vave Chocolate 'Program Change C' mode, toggles any CCs that your enter into the plugin.
+For the M-Vave Chocolate in 'Program Change C' mode, makes any enabled CCs A toggle.
 */
 desc:MIDI CC Toggles for M-Vave Chocolate (CrazyJ36)
 
@@ -14,49 +14,55 @@ out_pin:none
 lastMidiSignal = 0;
 
 @init
-ccLimit = 3;
+ccLimit = 3; // 128
 a = 0;
 while (a < ccLimit) (
   fileVar[a] = 0;
   a += 1;
 );
-hasPreviousSetting = 0;
+isSet = 0;
+onOff = #
 
 @gfx
 gfx_set(255);
 gfx_x = 1;
 gfx_y = 1;
-k = 0;
-while (k < ccLimit) (
-  gfx_printf("CC%d: %d\n", k, file_var(0, fileVar[k]));
-  k += 1;
+b = 0;
+while (b < ccLimit) (
+  file_var(0, fileVar[b]) == 0  ? (
+    onOff = "Off";
+  ) : (
+    onOff = "On";
+  );
+  gfx_printf("CC%d: %s\n", b, onOff);
+  b += 1;
 );
+gfx_printf("\nisSet: %d\n", isSet);
 
 @slider
-i = 0;
-while (i < ccLimit) (
-  slider(2) == i ? (
-    hasPreviousSetting ? ( // is 1
-      slider(3) = fileVar[i];
-      hasPreviousSetting = 0;
+c = 0;
+while (c < ccLimit) (
+  slider(2) == c ? (
+    isSet ? ( // is 1
+      slider(3) = file_var(0, fileVar[c]);
+      isSet = 0;
     );
-    fileVar[i] = slider(3);
+    fileVar[c] = slider(3);
   );
-  i += 1;
+  c += 1;
 );
 
 @serialize
-j = 0;
-while (j < ccLimit) (
-  file_var(0, fileVar[j]);
-  hasPreviousSetting = 1;
-  j += 1;
+d = 0;
+while (d < ccLimit) (
+  file_var(0, fileVar[d]);
+  isSet = 1;
+  d += 1;
 );
 
 @block
 while (midirecv(offset, msg1, msg2, msg3)) (
-  // if lastMidiSignal is non-zero.
-  lastMidiSignal ? ( 
+  lastMidiSignal ? ( // non-zero
     midisend(mpos, msg1, msg2, 0);
   ) : ( 
     midisend(mpos, msg1, msg2, 127);
