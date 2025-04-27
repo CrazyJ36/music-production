@@ -15,9 +15,12 @@ lastMidiSignal = 0;
 
 @init
 ccLimit = 3;
-fileVar[0] = 0;
-fileVar[1] = 1;
-fileVar[2] = 2;
+a = 0;
+while (a < ccLimit) (
+  fileVar[a] = 0;
+  a += 1;
+);
+hasPreviousSetting = 0;
 
 @gfx
 gfx_set(255);
@@ -25,7 +28,7 @@ gfx_x = 1;
 gfx_y = 1;
 k = 0;
 while (k < ccLimit) (
-  gfx_printf("CC%d Value: %d\n", k, file_var(0, fileVar[k]));
+  gfx_printf("CC%d: %d\n", k, file_var(0, fileVar[k]));
   k += 1;
 );
 
@@ -33,7 +36,11 @@ while (k < ccLimit) (
 i = 0;
 while (i < ccLimit) (
   slider(2) == i ? (
-    slider(3) = file_var(0, fileVar[i]);
+    hasPreviousSetting ? ( // is 1
+      slider(3) = fileVar[i];
+      hasPreviousSetting = 0;
+    );
+    fileVar[i] = slider(3);
   );
   i += 1;
 );
@@ -41,9 +48,8 @@ while (i < ccLimit) (
 @serialize
 j = 0;
 while (j < ccLimit) (
-  slider(2) == j ? (
-    file_var(0, fileVar[j]);
-  );
+  file_var(0, fileVar[j]);
+  hasPreviousSetting = 1;
   j += 1;
 );
 
