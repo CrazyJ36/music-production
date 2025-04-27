@@ -1,4 +1,4 @@
-/
+  /*
 For the M-Vave Chocolate in 'Program Change C' mode, makes any enabled CCs A toggle.
 */
 desc:MIDI CC Toggles for M-Vave Chocolate (CrazyJ36)
@@ -14,54 +14,54 @@ out_pin:none
 @init
 ext_noinit = 1.0;
 ccLimit = 3; // 128;
-isSet = 1;
+isSet = 0;
 
 @gfx
 gfx_set(255);
 gfx_x = 1;
 gfx_y = 1;
 // Final
-gfx_printf("Enabled CCs:\n\n");
-a = 0;
+/*gfx_printf("Enabled CCs:\n\n");
+*a = 0;
 while (a < ccLimit) (
   file_var(0, fileVar[a]) == 1 ? (
     gfx_printf("%d,", a);
   );
   a += 1;
 );
-
-gfx_x = 1;
+gfx_x = 1;*/
 // Debug
 gfx_printf("\n\nDebug:\n");
-i = 0;
-while (i < ccLimit) (
-  gfx_printf("CC%d: %d\n", i, file_var(0, fileVar[i])); 
-  i += 1;
+a = 0;
+while (a < ccLimit) (
+  gfx_printf("CC%d: %d\n", a, state[a]); 
+  a += 1;
 );
-gfx_printf("isSet: %d\n", isSet);
+gfx_printf("isSet: %d", isSet);
+isSet = 1;
 
 @slider
-c = 0;
-while (c < ccLimit) (
-  slider(2) == c ? (
-    isSet ? ( // is 1.
+b = 0;
+while (b < ccLimit) (
+  slider(2) == b ? (
+    isSet ? ( // is 1
+      slider(3) = file_var(0, state[b]);
       isSet = 0;
-      slider(3) = file_var(0, fileVar[c]);
     );
-    fileVar[c] = slider(3);
+    state[b] = slider(3);
   );
-  c += 1;
+  b += 1;
 );
 
 @serialize
-d = 0;
-while (d < ccLimit) (
-  file_var(0, fileVar[d]);
-  d += 1;
+c = 0;
+while (c < ccLimit) (
+  file_var(0, state[c]);
+  //isSet = 1;
+  c += 1;
 );
-isSet = 1;
 
-@block
+/*@block
 while (midirecv(offset, msg1, msg2, msg3)) (
   lastMidiSignal ? ( // non-zero
     midisend(mpos, msg1, msg2, 0);
@@ -69,6 +69,6 @@ while (midirecv(offset, msg1, msg2, msg3)) (
     midisend(mpos, msg1, msg2, 127);
   );
   lastMidiSignal = msg3;
-);
+);*/
 
 
