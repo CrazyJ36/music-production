@@ -3,8 +3,7 @@ NOT DONE! For M-Vave Chocolate 'Program Change C' mode, toggles any CCs that you
 */
 desc:MIDI CC Toggles for M-Vave Chocolate (CrazyJ36)
 
-// sliderNum:variable=default_val<min, max, inc{val1, val2}>in_fx_text. Using {val1, val2} shows as list, exclude for slider.
-slide1:1<1,16,1>Midi Channel
+slider1:1<1,16,1>Midi Channel
 //slider2:0<0, 127,1{0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114,115,116,117,118,119,120,121,122,123,124,125,126,127}>CC to toggle
 slider2:0<0,2,1{0,1,2}>CC to change
 slider3:0<0,1,1{Off,On}>On/Off
@@ -16,29 +15,25 @@ lastMidiSignal = 0;
 
 @init
 ccLimit = 3;
+fileVar[0] = 0;
+fileVar[1] = 1;
+fileVar[2] = 2;
 
 @gfx
 gfx_set(255);
 gfx_x = 1;
 gfx_y = 1;
 k = 0;
-cc[0] = "0";
-cc[1] = "1";
-cc[2] = "2";
 while (k < ccLimit) (
-  x = 50;
-  strcpy(x, "last");
-  strcat(x, cc[k]);
-  gfx_printf("cc%d: %s\n", k, x);
+  gfx_printf("CC%d Value: %d\n", k, file_var(0, fileVar[k]));
   k += 1;
 );
-
 
 @slider
 i = 0;
 while (i < ccLimit) (
   slider(2) == i ? (
-    slider(3) = file_var(0, cc[i]);
+    slider(3) = file_var(0, fileVar[i]);
   );
   i += 1;
 );
@@ -47,12 +42,10 @@ while (i < ccLimit) (
 j = 0;
 while (j < ccLimit) (
   slider(2) == j ? (
-    file_var(0, cc[j]);
+    file_var(0, fileVar[j]);
   );
   j += 1;
 );
-
-
 
 @block
 while (midirecv(offset, msg1, msg2, msg3)) (
