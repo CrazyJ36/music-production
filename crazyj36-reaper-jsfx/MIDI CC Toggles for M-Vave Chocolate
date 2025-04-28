@@ -19,16 +19,18 @@ lastMidiSignal = 0;
 gfx_set(255);
 gfx_x = 1;
 gfx_y = 1;
-gfx_printf("Enabled CCs:\n\n");
+gfx_drawstr("Enabled CCs:\n\n");
 a = 0;
+#enabledCCs = "";
 while (a < ccCount) (
   file_var(0, slider2State[a]) ? (
-    gfx_drawstr(sprintf(#, "%d,", a));
+    #enabledCCs += sprintf(#, "%d,", a);
   );
   a += 1;
 );
-// Debug
-//gfx_measurestr(enabledCCsStr);
+gfx_drawstr(#enabledCCs);
+// if strlen(enabledCCs) > 64, \n.
+//gfx_x = 1;
 
 @slider
 b = 0;
