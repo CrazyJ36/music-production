@@ -16,7 +16,7 @@ isSlider2Set = 0;
 lastMidiSignal = 0;
 
 @gfx
-gfx_set(255);
+gfx_set(1);
 gfx_x = 1;
 gfx_y = 1;
 gfx_drawstr("Enabled CCs:\n\n");
@@ -30,7 +30,9 @@ while (a < ccCount) (
 );
 gfx_drawstr(#enabledCCs);
 // if strlen(enabledCCs) > 64, \n.
-//gfx_x = 1;
+gfx_x = 1;
+gfx_drawstr("\n\n");
+gfx_drawnumber(strlen(#enabledCCs), 0);
 
 @slider
 b = 0;
