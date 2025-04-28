@@ -51,13 +51,12 @@ while (c < ccCount) (
 @block
 isSlider3Set = 1;
 while (midirecv(offset, msg1, msg2, msg3)) (
-  sendMidi = 1;
   slider3State[msg2] ? (
     enabled = 1;
   ): (
     enabled = 0;
   );
-  enabled && sendMidi ? (
+  enabled ? (
    lastMidiSignal ? (
      midisend(offset, msg1, msg2, 0);
      lastMidiSignal = 0;
@@ -65,7 +64,8 @@ while (midirecv(offset, msg1, msg2, msg3)) (
       midisend(offset, msg1, msg2, 127);
       lastMidiSignal = 127;
     );
-    sendMidi = 0;
+  ) : (
+    midisend(offset, msg1, msg2, msg3);
   );
 );
 
