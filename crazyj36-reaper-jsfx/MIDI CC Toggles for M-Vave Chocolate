@@ -1,5 +1,6 @@
 /*
-For the M-Vave Chocolate in 'Program Change C' mode, makes any enabled CCs A toggle.
+For the M-Vave Chocolate in 'Program Change C' mode.
+Makes any enabled CCs A toggle.
 */
 desc:MIDI CC Toggles for M-Vave Chocolate (CrazyJ36)
 
@@ -15,8 +16,7 @@ ccCount = 128;
 isSlider2Set = 0;
 lastMidiSignal = 0;
 
-@gfx
-gfx_set(1);
+@gfx 446 156
 gfx_x = 1;
 gfx_y = 1;
 gfx_drawstr("Enabled CCs:\n\n");
@@ -29,10 +29,69 @@ while (a < ccCount) (
   a += 1;
 );
 gfx_drawstr(#enabledCCs);
-// if strlen(enabledCCs) > 64, \n.
-gfx_x = 1;
+
+// Debug
+#testStr = "";
+i = 0;
+while (i < ccCount) (
+  #testStr += sprintf(#, "%d,", i);
+  i += 1;
+);
 gfx_drawstr("\n\n");
-gfx_drawnumber(strlen(#enabledCCs), 0);
+gfx_x = 1;
+gfx_drawstr("string length: ");
+strLen = strlen(#testStr);
+gfx_drawnumber(strLen, 0);
+#newStr = "";
+// 56 is 22(where I cut off) in single chars, 402 is total
+// chars out of 128 numbers, including ending comma.
+strLen <= 56 ? (
+  gfx_drawstr("\n\n");
+  gfx_x = 1;
+  gfx_drawstr(#testStr);
+);
+strLen > 56 ? (
+  strcpy_substr(#newStr, #testStr, 56, 56);
+  gfx_drawstr("\n\n");
+  gfx_x = 1;
+  gfx_drawstr(#newStr);
+);
+strLen > 112 ? (
+  strcpy_substr(#newStr, #testStr, 112, 56);
+  gfx_drawstr("\n\n");
+  gfx_x = 1;
+  gfx_drawstr(#newStr);
+);
+strLen > 168 ? (
+  strcpy_substr(#newStr, #testStr, 168, 56);
+  gfx_drawstr("\n\n");
+  gfx_x = 1;
+  gfx_drawstr(#newStr);
+);
+strLen > 224 ? (
+  strcpy_substr(#newStr, #testStr, 224, 56);
+  gfx_drawstr("\n\n");
+  gfx_x = 1;
+  gfx_drawstr(#newStr);
+);
+strLen > 280 ? (
+  strcpy_substr(#newStr, #testStr, 280, 56);
+  gfx_drawstr("\n\n");
+  gfx_x = 1;
+  gfx_drawstr(#newStr);
+);
+strLen > 336 ? (
+  strcpy_substr(#newStr, #testStr, 336, 56);
+  gfx_drawstr("\n\n");
+  gfx_x = 1;
+  gfx_drawstr(#newStr);
+);
+strLen > 392 ? (
+  strcpy_substr(#newStr, #testStr, 392, 56);
+  gfx_drawstr("\n\n");
+  gfx_x = 1;
+  gfx_drawstr(#newStr);
+);
 
 @slider
 b = 0;
