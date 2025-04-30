@@ -19,26 +19,6 @@ while (i < ccCount) (
   #CCValues[i] = "Off";
   i += 1;
 );
-#lines[0] = 0;
-#lines[1] = 56;
-#lines[2] = 112;
-#lines[3] = 168;
-#lines[4] = 224;
-#lines[5] = 280;
-#lines[6] = 336;
-#lines[7] = 392;
-#lines[8] = 448;
-#lines[9] = 504;
-#lines[10] = 560;
-#lines[11] = 616;
-#lines[12] = 672;
-#lines[13] = 728;
-#lines[14] = 784;
-#lines[15] = 840;
-#lines[16] = 896;
-#lines[17] = 952;
-#lines[18] = 1008;
-#lines[19] = 1064;
 
 @gfx
 gfx_x = 1;
@@ -52,19 +32,15 @@ while (a < ccCount) (
  // );
   a += 1;
 );
-// #lines were here and they were all showing.
-j = 0;
-while(j <= 19) (
-  strlen(#enabledCCs) > #lines[j] ? (
+gfx_drawstr("\n");
+strlen(#enabledCCs) > 56 ? (
+  i = 0;
+  while (i < 19) (
     gfx_x = 1;
-    gfx_drawstr("\n\n");
-    gfx_drawstr(strcpy_substr(#, #enabledCCs, #lines[j], 56));
+    gfx_printf("\n%s\n", strcpy_substr(#, #enabledCCs, 56 * i, 56));
+    i += 1;
   );
-  j += 1;
 );
-/*gfx_x = 1;
-gfx_drawstr("\n\nEnabledCCs length:\n");
-gfx_drawnumber(strlen(#enabledCCs), 0);*/
 
 @slider
 b = 0;
