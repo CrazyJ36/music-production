@@ -16,6 +16,12 @@ ccCount = 128;
 isSlider2Set = 0;
 lastMidiSignal = 0;
 
+i = 0;
+while (i < ccCount) (
+  CCValues[i] = 0;
+  i += 1;
+);
+
 @gfx 489 156
 gfx_x = 1;
 gfx_y = 1;
@@ -32,22 +38,37 @@ a = 0;
 #enabledCCs = "";
 #enabledCCsCut = "";
 while (a < ccCount) (
-  file_var(0, slider2State[a]) ? (
-    #enabledCCs += sprintf(#, "%d,", a);
-  );
+  //file_var(0, slider2State[a]) ? ( // commenting this shows all CCs.
+    #enabledCCs += sprintf(#, "%d", a);
+    #enabledCCs += sprintf(#, "[%d], ", CCValues[a]);
+  //);
   a += 1;
 );
 
 j = 0;
 while(j < 8) (
-  strlen(#enabledCCs) > lines[j] ? (
-    strcpy_substr(#enabledCCsCut, #enabledCCs, #lines[j], 56); // set 56 to cut off.
-    gfx_drawstr("\n\n");
+  strlen(#enabledCCs) > #lines[j] ? (
+    strcpy_substr(#enabledCCsCut, #enabledCCs, #lines[j], 56);
     gfx_x = 1;
+    gfx_drawstr("\n\n");
     gfx_drawstr(#enabledCCsCut);
   );
   j += 1;
 );
+
+/*gfx_drawstr("\n\n"); 
+gfx_x = 1;
+gfx_drawstr("CCs stored values: ");
+x = 0;
+while (x < ccCount) (
+  gfx_drawnumber(CCValues[x], 0);
+  x += 1;
+);*/
+
+gfx_x = 1;
+gfx_drawstr("\n\nEnabledCCs length:\n");
+gfx_drawnumber(strlen(#enabledCCs), 0);
+
 
 @slider
 b = 0;
@@ -72,6 +93,15 @@ while (c < ccCount) (
 @block
 isSlider2Set = 1;
 while (midirecv(offset, msg1, msg2, msg3)) (
+  
+  x = 0;
+  while (x < ccCount) (
+    x = msg2 ? (
+      CCValues[x] = msg3;
+    );
+    x += 1;
+  );
+  
   slider2State[msg2] ? (
     enabled = 1;
   ): (
@@ -79,11 +109,11 @@ while (midirecv(offset, msg1, msg2, msg3)) (
   );
   enabled ? (
    lastMidiSignal ? (
-     midisend(offset, msg1, msg2, 0);
-     lastMidiSignal = 0;
+   lastMidiSignal = 0;
+     midisend(offset, msg1, msg2, lastMidiSignal);
     ) : ( 
-      midisend(offset, msg1, msg2, 127);
       lastMidiSignal = 127;
+      midisend(offset, msg1, msg2, lastMidiSignal);
     );
   ) : (
     midisend(offset, msg1, msg2, msg3);
