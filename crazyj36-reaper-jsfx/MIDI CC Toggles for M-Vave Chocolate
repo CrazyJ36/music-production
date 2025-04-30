@@ -14,18 +14,11 @@ out_pin:none
 ext_noinit = 1.0;
 ccCount = 128;
 isSlider2Set = 0;
-lastMidiSignal = 0;
 i = 0;
 while (i < ccCount) (
   #CCValues[i] = "Off";
   i += 1;
 );
-
-@gfx 489 156
-gfx_x = 1;
-gfx_y = 1;
-gfx_drawstr("Enabled CCs:");
-a = 0;
 #lines[0] = 0;
 #lines[1] = 56;
 #lines[2] = 112;
@@ -34,22 +27,38 @@ a = 0;
 #lines[5] = 280;
 #lines[6] = 336;
 #lines[7] = 392;
+#lines[8] = 448;
+#lines[9] = 504;
+#lines[10] = 560;
+#lines[11] = 616;
+#lines[12] = 672;
+#lines[13] = 728;
+#lines[14] = 784;
+#lines[15] = 840;
+#lines[16] = 896;
+#lines[17] = 952;
+#lines[18] = 1008;
+#lines[19] = 1064;
+
+@gfx
+gfx_x = 1;
+gfx_y = 1;
+gfx_drawstr("Enabled CCs and their toggle status:");
+a = 0;
 #enabledCCs = "";
-#enabledCCsCut = "";
 while (a < ccCount) (
-  file_var(0, slider2State[a]) ? ( // commenting this shows all CCs.
-    #enabledCCs += sprintf(#, "%d", a);
-    #enabledCCs += sprintf(#, "[%s], ", #CCValues[a]);
-  );
+  //file_var(0, slider2State[a]) ? ( // commenting this shows all CCs.
+    #enabledCCs += sprintf(#, "%d[%s], ", a, #CCValues[a]);
+ // );
   a += 1;
 );
+// #lines were here and they were all showing.
 j = 0;
-while(j < 8) (
+while(j <= 19) (
   strlen(#enabledCCs) > #lines[j] ? (
-    strcpy_substr(#enabledCCsCut, #enabledCCs, #lines[j], 56);
     gfx_x = 1;
     gfx_drawstr("\n\n");
-    gfx_drawstr(#enabledCCsCut);
+    gfx_drawstr(strcpy_substr(#, #enabledCCs, #lines[j], 56));
   );
   j += 1;
 );
@@ -82,25 +91,16 @@ isSlider2Set = 1;
 while (midirecv(offset, msg1, msg2, msg3)) (
   slider2State[msg2] ? (
     lastMidiSignal ? (
+      midisend(offset, msg1, msg2, 0);
+      #CCValues[msg2] = "Off";
       lastMidiSignal = 0;
-      midisend(offset, msg1, msg2, lastMidiSignal);
     ) : ( 
+      midisend(offset, msg1, msg2, 127);
+      #CCValues[msg2] = "On";
       lastMidiSignal = 127;
-      midisend(offset, msg1, msg2, lastMidiSignal);
     );
   ) : (
     midisend(offset, msg1, msg2, msg3);
-  );
-  x = 0;
-  while (x < ccCount) (
-    x == msg2 ? (
-      lastMidiSignal ? (
-        #CCValues[x] = "On";
-      ) : (
-        #CCValues[x] = "Off";
-      );
-    );
-    x += 1;
   );
 );
 
