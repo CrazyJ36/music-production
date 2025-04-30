@@ -35,12 +35,31 @@ while (a < ccCount) (
 gfx_drawstr("\n");
 strlen(#enabledCCs) > 56 ? (
   i = 0;
-  while (i < 19) (
+  while (i < 24) (
     gfx_x = 1;
     gfx_printf("\n%s\n", strcpy_substr(#, #enabledCCs, 56 * i, 56));
     i += 1;
   );
+) : (
+  gfx_x = 1;
+  gfx_drawstr("\n");
+  gfx_drawstr(#enabledCCs);
 );
+
+
+j = 0;
+while (j < ccCount) (
+  
+
+  /*#itemsStart[j] = strcpy_substr(#enabledCCs, ",", lastItemStart + 1, 0);
+  #itemsEnd[j] = strcpy_substr(#, " ", lastItemStart + strlen(#itemsEnd[j]), 56);
+  lastItemStart = j * 56;
+  gfx_x = 1;
+  gfx_drawstr("\n\n");
+  gfx_printf("start: %s end: %s", #itemsStart[j], #itemsEnd[j]);*/
+  j += 1;
+);
+
 
 @slider
 b = 0;
@@ -66,18 +85,14 @@ while (c < ccCount) (
 isSlider2Set = 1;
 while (midirecv(offset, msg1, msg2, msg3)) (
   slider2State[msg2] ? (
-    lastMidiSignal ? (
+    #CCValues[msg2] == "On"? (
       midisend(offset, msg1, msg2, 0);
       #CCValues[msg2] = "Off";
-      lastMidiSignal = 0;
-    ) : ( 
+    ) : (
       midisend(offset, msg1, msg2, 127);
       #CCValues[msg2] = "On";
-      lastMidiSignal = 127;
     );
   ) : (
     midisend(offset, msg1, msg2, msg3);
   );
 );
-
-
