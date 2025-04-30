@@ -19,38 +19,48 @@ while (i < ccCount) (
   #CCValues[i] = "Off";
   i += 1;
 );
-
+linesNum = 21;
+linesWidth = 56;
 @gfx
 gfx_x = 1;
 gfx_y = 1;
-gfx_drawstr("Enabled CCs and their toggle status:");
-a = 0;
+gfx_drawstr("Enabled CCs and their active status:");
 #enabledCCs = "";
+a = 0;
 while (a < ccCount) (
   //file_var(0, slider2State[a]) ? ( // commenting this shows all CCs.
     #enabledCCs += sprintf(#, "%d[%s], ", a, #CCValues[a]);
- // );
+  //);
   a += 1;
 );
 gfx_drawstr("\n");
-strlen(#enabledCCs) > 56 ? (
+strlen(#enabledCCs) > linesWidth ? (
   i = 0;
-  while (i < 24) (
+  while (i < linesNum) (
     gfx_x = 1;
-    gfx_printf("\n%s\n", strcpy_substr(#, #enabledCCs, 56 * i, 56));
+    gfx_printf("\n%s\n", strcpy_substr(#, #enabledCCs, linesWidth * i, linesWidth)); // make lines
     i += 1;
   );
 ) : (
   gfx_x = 1;
-  gfx_drawstr("\n");
-  gfx_drawstr(#enabledCCs);
+  gfx_printf("\n%s", #enabledCCs);
 );
 
 
+//lastCommaPosition = 0;
+//#itemAfterComma = "";
+commaCount = 0;
 j = 0;
 while (j < ccCount) (
-  
-
+  str_getchar(#enabledCCs, j) == ',' ? (
+    commaCount += 1;
+    //lastCommaPosition = j;
+    //#itemAfterComma = strcpy_substr(#, #enabledCCs, j, 56);
+  );
+  /*j > 115 ? (
+    gfx_x = 1;
+    gfx_printf("lastCommaPosition: %d, line: %s\n", lastCommaPosition, #itemAfterComma);
+  );*/
   /*#itemsStart[j] = strcpy_substr(#enabledCCs, ",", lastItemStart + 1, 0);
   #itemsEnd[j] = strcpy_substr(#, " ", lastItemStart + strlen(#itemsEnd[j]), 56);
   lastItemStart = j * 56;
@@ -59,7 +69,9 @@ while (j < ccCount) (
   gfx_printf("start: %s end: %s", #itemsStart[j], #itemsEnd[j]);*/
   j += 1;
 );
-
+gfx_x = 1;
+gfx_printf("\ncommaCount: %d", commaCount);
+ 
 
 @slider
 b = 0;
