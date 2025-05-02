@@ -1,6 +1,8 @@
 /*
-For the M-Vave Chocolate in 'Program Change C' mode.
-Makes any enabled CCs A toggle.
+For the M-Vave Chocolate in 'Program Change C' mode that only send the value of CC0. 
+Any enabled CCs will become A toggle.
+How to use in Reaper: Save this script as A regular file and put it in your
+AppData/Roaming/REAPER/Effects directory.
 */
 desc:MIDI CC Toggles for M-Vave Chocolate (CrazyJ36)
 
@@ -19,59 +21,40 @@ while (i < ccCount) (
   #CCValues[i] = "Off";
   i += 1;
 );
-linesNum = 21;
-linesWidth = 56;
+linesNum = 20;
+linesWidth = 60;
+
 @gfx
 gfx_x = 1;
 gfx_y = 1;
 gfx_drawstr("Enabled CCs and their active status:");
 #enabledCCs = "";
-a = 0;
+
+a = 0; // change this to show only hundreds or 10s.
 while (a < ccCount) (
-  //file_var(0, slider2State[a]) ? ( // commenting this shows all CCs.
+  file_var(0, slider2State[a]) ? ( // comment this to show all CCs.
     #enabledCCs += sprintf(#, "%d[%s], ", a, #CCValues[a]);
-  //);
+  );
   a += 1;
 );
-gfx_drawstr("\n");
+
 strlen(#enabledCCs) > linesWidth ? (
   i = 0;
   while (i < linesNum) (
+    #line = strcpy_substr(#, #enabledCCs, linesWidth * i, linesWidth);
     gfx_x = 1;
-    gfx_printf("\n%s\n", strcpy_substr(#, #enabledCCs, linesWidth * i, linesWidth)); // make lines
+    gfx_printf("\n\n%s", #line);
+    
+    //gfx_x = 1;
+    //gfx_printf("\nLAST LINE LENGTH: %d", strlen(#line));
+    
     i += 1;
   );
+  
 ) : (
   gfx_x = 1;
-  gfx_printf("\n%s", #enabledCCs);
+  gfx_printf("\n\n%s", #enabledCCs);
 );
-
-
-//lastCommaPosition = 0;
-//#itemAfterComma = "";
-commaCount = 0;
-j = 0;
-while (j < ccCount) (
-  str_getchar(#enabledCCs, j) == ',' ? (
-    commaCount += 1;
-    //lastCommaPosition = j;
-    //#itemAfterComma = strcpy_substr(#, #enabledCCs, j, 56);
-  );
-  /*j > 115 ? (
-    gfx_x = 1;
-    gfx_printf("lastCommaPosition: %d, line: %s\n", lastCommaPosition, #itemAfterComma);
-  );*/
-  /*#itemsStart[j] = strcpy_substr(#enabledCCs, ",", lastItemStart + 1, 0);
-  #itemsEnd[j] = strcpy_substr(#, " ", lastItemStart + strlen(#itemsEnd[j]), 56);
-  lastItemStart = j * 56;
-  gfx_x = 1;
-  gfx_drawstr("\n\n");
-  gfx_printf("start: %s end: %s", #itemsStart[j], #itemsEnd[j]);*/
-  j += 1;
-);
-gfx_x = 1;
-gfx_printf("\ncommaCount: %d", commaCount);
- 
 
 @slider
 b = 0;
@@ -97,6 +80,12 @@ while (c < ccCount) (
 isSlider2Set = 1;
 while (midirecv(offset, msg1, msg2, msg3)) (
   slider2State[msg2] ? (
+  
+    msg3 ? (
+      midisend(offset, msg1, msg2, 0);
+      #CCValues[msg2] = "Off";
+    );
+    
     #CCValues[msg2] == "On"? (
       midisend(offset, msg1, msg2, 0);
       #CCValues[msg2] = "Off";
