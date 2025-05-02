@@ -29,7 +29,6 @@ gfx_x = 1;
 gfx_y = 1;
 gfx_drawstr("Enabled CCs and their active status:");
 #enabledCCs = "";
-
 a = 0; // change this to show only hundreds or 10s.
 while (a < ccCount) (
   file_var(0, slider2State[a]) ? ( // comment this to show all CCs.
@@ -37,20 +36,14 @@ while (a < ccCount) (
   );
   a += 1;
 );
-
 strlen(#enabledCCs) > linesWidth ? (
   i = 0;
   while (i < linesNum) (
     #line = strcpy_substr(#, #enabledCCs, linesWidth * i, linesWidth);
     gfx_x = 1;
     gfx_printf("\n\n%s", #line);
-    
-    //gfx_x = 1;
-    //gfx_printf("\nLAST LINE LENGTH: %d", strlen(#line));
-    
     i += 1;
   );
-  
 ) : (
   gfx_x = 1;
   gfx_printf("\n\n%s", #enabledCCs);
@@ -80,7 +73,6 @@ while (c < ccCount) (
 isSlider2Set = 1;
 while (midirecv(offset, msg1, msg2, msg3)) (
   slider2State[msg2] ? (
-  
     msg3 ? (
       midisend(offset, msg1, msg2, 0);
       #CCValues[msg2] = "Off";
