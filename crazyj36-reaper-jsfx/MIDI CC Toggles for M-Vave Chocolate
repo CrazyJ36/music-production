@@ -1,12 +1,13 @@
 /*
-For the M-Vave Chocolate in 'Program Change C' mode that only send the value of CC0. 
-Any enabled CCs will become A toggle.
-How to use in Reaper: Save this script as A regular file and put it in your
+For the M-Vave Chocolate, in 'Program Change C' mode that unfortunately only sends the value of 0 from CCs. 
+This Reaper JSFX plugin makes any of those CCs messages become A toggle when enabled in the UI.
+
+How to load into Reaper: Save this script as A regular file and put it in your
 AppData/Roaming/REAPER/Effects directory.
 */
-desc:MIDI CC Toggles for M-Vave Chocolate (CrazyJ36)
+desc:MIDI CC Toggles for M-Vave Chocolayte (CrazyJ36)
 
-slider1:0<0,127,1{0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114,115,116,117,118,119,120,121,122,123,124,125,126,127}>CC to change
+slider1:0<0,127,1{0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114,115,116,117,118,119,120,121,122,123,124,125,126,127}>CC to use
 slider2:0<0,1,1{Off,On}>Enable toggle mode
 
 in_pin:none
@@ -19,34 +20,30 @@ isSlider2Set = 0;
 i = 0;
 while (i < ccCount) (
   #CCValues[i] = "Off";
+  items[i] = i;
+  slider2State[i] = 0;
   i += 1;
 );
-linesNum = 20;
-linesWidth = 60;
 
 @gfx
 gfx_x = 1;
 gfx_y = 1;
-gfx_drawstr("Enabled CCs and their active status:");
-#enabledCCs = "";
+gfx_drawstr("Enabled CCs and their activity status:\n\n");
 a = 0; // change this to show only hundreds or 10s.
+x = 0;
 while (a < ccCount) (
   file_var(0, slider2State[a]) ? ( // comment this to show all CCs.
-    #enabledCCs += sprintf(#, "%d[%s], ", a, #CCValues[a]);
+    strcpy(items[a], sprintf(#, "%d[%s], ", a, #CCValues[a]));
+    x < 5 ? (
+      gfx_printf("%s", items[a]);
+      x += 1;
+    ) : (
+      gfx_x = 1;
+      gfx_printf("\n\n%s", items[a]);
+      x = 0;
+    );
   );
   a += 1;
-);
-strlen(#enabledCCs) > linesWidth ? (
-  i = 0;
-  while (i < linesNum) (
-    #line = strcpy_substr(#, #enabledCCs, linesWidth * i, linesWidth);
-    gfx_x = 1;
-    gfx_printf("\n\n%s", #line);
-    i += 1;
-  );
-) : (
-  gfx_x = 1;
-  gfx_printf("\n\n%s", #enabledCCs);
 );
 
 @slider
@@ -74,16 +71,21 @@ isSlider2Set = 1;
 while (midirecv(offset, msg1, msg2, msg3)) (
   slider2State[msg2] ? (
     msg3 ? (
-      midisend(offset, msg1, msg2, 0);
-      #CCValues[msg2] = "Off";
-    );
-    
-    #CCValues[msg2] == "On"? (
-      midisend(offset, msg1, msg2, 0);
-      #CCValues[msg2] = "Off";
+      #CCValues[msg2] == "On" ? (
+        midisend(offset, msg1, msg2, 0);
+        #CCValues[msg2] = "Off";
+      ) : (
+        midisend(offset, msg1, msg2, 127);
+        #CCValues[msg2] = "On";
+      );
     ) : (
-      midisend(offset, msg1, msg2, 127);
-      #CCValues[msg2] = "On";
+      #CCValues[msg2] == "Off" ? (
+        midisend(offset, msg1, msg2, 127);
+        #CCValues[msg2] = "On";
+      ) : (
+        midisend(offset, msg1, msg2, 0);
+        #CCValues[msg2] = "Off";
+      );
     );
   ) : (
     midisend(offset, msg1, msg2, msg3);
