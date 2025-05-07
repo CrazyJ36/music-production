@@ -1,13 +1,20 @@
-// Run in reaper actions and terminate by running again.
+// wORK IN PROGRESS
 
 loopCount = 0;
+commandId = NamedCommandLookup("_RS0a2c9b10e87f8321f19ececd4fa699dab4a6b959");
 
 gfx_init("ReaScript Loop Example");
+
 
 function run() (
   loopCount += 1;
   gfx_x = 1;
   gfx_printf("Loop Count:%d", loopCount);
+
+  gfx_getchar() ? (
+    ShowConsoleMsg(sprintf(#, "%d\n", SetToggleCommandState(0, commandId, 1)));
+  );
+  
   defer("run()");
 );
 
