@@ -1,5 +1,5 @@
 loopCount = 0;
-gfx_init("ReaScript Loop Example");
+gfx_init("ReaScript Loop Example EEL");
 
 function run() (
   loopCount += 1;
