@@ -1,24 +1,27 @@
 -- Work in progress
 
+-- CCs are message type 11, or 176, or 0xF0,
+-- Note on: 9, or 144, or 0x90,
+-- Note off: 8, or 128, orr 0x80
+-- can divide or multiply by 16.
+
 deviceMode = 23 -- 16 + reaper midi output device id.
-msg_type = 11 -- CCs are message type 11, Note on: 8, etc.
-channel = 0 -- actual channel - 1.
-cc = 0
 lastTrackParamValues = {}
 
 function run()
-  inputEvent = {reaper.MIDI_GetRecentInputEvent(0)} -- table of returned values.
-  cc = string.byte(inputEvent[2], 2)
-  ccValue = string.byte(inputEvent[2], 3)
-  if cc ~= lastCC or ccValue ~= lastCCValue then
-    --[[if ccValue == 0 then
-      reaper.StuffMIDIMessage(deviceMode, msg_type * 16 + channel, cc, 0)
-    else 
-      reaper.StuffMIDIMessage(deviceMode, msg_type * 16 + channel, cc, 127)
-    end]]
-    reaper.ShowConsoleMsg("Input CC and Value: "..cc .. "-" .. ccValue .. "\n\n")
-    lastCC = cc
-    lastCCValue = ccValue
+  inputEvent = {reaper.MIDI_GetRecentInputEvent(0)}
+  deviceId = inputEvent[4]
+  msg = inputEvent[2]
+  if msg ~= 0 and msg ~= lastInputEvent then
+    cc = msg:byte(2)
+    ccValue = msg:byte(3)
+    channel = msg:byte(1) & 0x0F -- actual channel + 1
+    msgType = msg:byte(1) & 0xF0 
+    reaper.ShowConsoleMsg(
+      "Last midi event:\nmsgType: "..msgType..",\nchannel: "..channel
+      ..",\ncc: "..cc..",\nccValue: "..ccValue.."\nInput deviceId: "..deviceId.."\n\n"
+    )
+    lastInputEvent = msg
   end
   
   num_tracks = reaper.CountSelectedTracks(0)
@@ -31,11 +34,11 @@ function run()
       paramValue = paramInfo[1]
       if paramValue ~= lastTrackParamValues[i] then
         if paramValue == 0 then
-          reaper.StuffMIDIMessage(deviceMode, msg_type * 16 + channel, cc, 0)
+          reaper.StuffMIDIMessage(deviceMode, msgType + channel, cc, 0)
         else 
-          reaper.StuffMIDIMessage(deviceMode, msg_type * 16 + channel, cc, 127)
+          reaper.StuffMIDIMessage(deviceMode, msgType + channel, cc, 127)
         end
-        reaper.ShowConsoleMsg("Current Param Value: "..paramValue.."\n")
+        reaper.ShowConsoleMsg("Last Param Value: "..paramValue.."\n")
         lastTrackParamValues[i] = paramValue
       end
   end
@@ -44,7 +47,7 @@ function run()
 end
 
 function onExit()
-  reaper.ShowConsoleMsg("\nExited");
+  reaper.ShowConsoleMsg("\nExited\n");
 end
 
 run()
