@@ -5,9 +5,8 @@
 gfx.init("Toggle", 200, 200)
 
 btnToggleBounds = {5, 5, 40, 20}
-btnToggleState = false
-
 btnExitBounds = {150, 5, 40, 20}
+btnToggleState = false
 
 function main()
   
@@ -16,21 +15,16 @@ function main()
   if mouseState and 
     not lastMouseState and
     gfx.mouse_x > btnToggleBounds[1] and
-    gfx.mouse_x < btnToggleBounds[3] and
+    gfx.mouse_x < btnToggleBounds[3] + btnToggleBounds[1] and
     gfx.mouse_y > btnToggleBounds[2] and
-    gfx.mouse_y < btnToggleBounds[4] then
+    gfx.mouse_y < btnToggleBounds[4] + btnToggleBounds[2] then
       btnToggleState = not btnToggleState
-  end
-  
-  
-  mouseState = gfx.mouse_cap & 1 == 1
-  if mouseState and
+  elseif mouseState and
     not lastMouseState and
     gfx.mouse_x > btnExitBounds[1] and
-    gfx.mouse_x < btnExitBounds[3] + 150 and
+    gfx.mouse_x < btnExitBounds[3] + btnExitBounds[1] and
     gfx.mouse_y > btnExitBounds[2] and
-    gfx.mouse_y < btnExitBounds[4] + 5 then
-      
+    gfx.mouse_y < btnExitBounds[4] + btnExitBounds[2] then
       return
   end
   lastMouseState = mouseState
@@ -63,7 +57,7 @@ end
 main()
 function atExit()
   gfx.quit()
-  reaper.ShowConsoleMsg("Killed Action Successfully.")
+  reaper.ShowConsoleMsg("Killed Action Successfully.\n")
 end
 reaper.atexit(atExit)
 
