@@ -119,12 +119,14 @@ function setParam()
   currentInputEvent = {reaper.MIDI_GetRecentInputEvent(0)}
   msg = currentInputEvent[2]
   if msg ~= nil and currentInputEvent[1] ~= 0 then
+    channel = msg:byte(1) & 0x0F
     msgType = msg:byte(1) & 0xF0
-    if msg ~= lastInputEvent[2] and 
-    msgType == 176 then
+    --if msg ~= lastInputEvent[2] and 
+    if msgType == 176 then
       for i = 0, #ccs do
       if msg:byte(2) == ccs[i] then
-        if msg:byte(3) == 127 then
+        inputValue = msg:byte(3)
+        if inputValue == 127 then
           reaper.ShowConsoleMsg("setting high\n")
           reaper.TrackFX_SetParam(
             track, 
@@ -132,7 +134,7 @@ function setParam()
             params[i], 
             maxValues[i]
           )
-          reaper.StuffMIDIMessage(deviceMode, msgType + msg:byte(3), ccs[i], 127)
+          reaper.StuffMIDIMessage(deviceMode, msgType + channel, ccs[i], 127)
         else
           reaper.ShowConsoleMsg("setting low\n")
            reaper.TrackFX_SetParam(
@@ -140,8 +142,8 @@ function setParam()
              fx[i],
              params[i], 
              minValues[i]
-           )
-            reaper.StuffMIDIMessage(deviceMode, msgType + msg:byte(3), ccs[i], 0)
+          )
+          reaper.StuffMIDIMessage(deviceMode, msgType + channel, ccs[i], 0)
          end
        end
      end
