@@ -10,22 +10,20 @@
 deviceMode = 23 -- 16 + reaper midi output device id.
 maxLearnCount = 2 -- 2 for two pedals, starts at one.
 learnBtnBounds = {5, 5, 60, 20}
-quitBtnBounds = {235, 5, 60, 20}
+quitBtnBounds = {335, 5, 60, 20}
 terminate = false
 learningState = false
-learningStateText = ""
-uiInfo = "Some ui info to add to."
+learningStateText = "Press Learn"
+mappedCCsText = ""
 gotCC = false
 ccs = {}
 fxs = {}
+fxNames = {}
 params = {}
 minValues = {}
 maxValues = {}
 oldInputEvent = {reaper.MIDI_GetRecentInputEvent(0)}
 oldTouchedFx = {reaper.GetLastTouchedFX()}
-if not oldTouchedFx[1] then
-  reaper.ShowConsoleMsg("No Touched FX globally")
-end
 oldParamId = {
   reaper.TrackFX_GetParamIdent(
     reaper.GetLastTouchedTrack(), 
@@ -44,10 +42,19 @@ function main()
   if terminate then 
     return
   end
-  gfx.init("Learn CCs then Params", 300, 100)
-  ui()
+  
+  mappedCCsText = ""
+  for i = 1, #fxNames do
+    mappedCCsText = mappedCCsText.."CC "..
+      ccs[i]..": "..
+      fxNames[i].."\n"
+  end
+  if not learningState then 
+    learningStateText = "Press Learn"
+  end
   
   if learningState then
+    --mappedCCsText = ""
     if #params < maxLearnCount then
       if not gotCC then
         reaper.runloop(learnCC())
@@ -61,7 +68,10 @@ function main()
     setParamAndLed()
   end
   
+  gfx.init("Learn CCs then Params", 400, 300)
+  ui()
   reaper.defer(main)
+
 end
 
 function getInputEvent() 
@@ -86,7 +96,7 @@ function learnCC()
   if inputEvent[1] then
     table.insert(ccs, inputEvent[2])
     gotCC = true
-    reaper.ShowConsoleMsg("Learned CC\n")
+    reaper.ShowConsoleMsg("Returning from learnCC()\n")
     return
   end
 end
@@ -94,9 +104,6 @@ end
 function learnParam() 
   learningStateText = "Learning Param"
   currentTouchedFx = {reaper.GetLastTouchedFX()}
-  if not currentTouchedFx[1] then
-    reaper.ShowConsoleMsg("No Touched FX in learnParam")
-  end
   currentParamId = {reaper.TrackFX_GetParamIdent(
     reaper.GetLastTouchedTrack(), 
     currentTouchedFx[3], currentTouchedFx[4]
@@ -105,16 +112,32 @@ function learnParam()
     reaper.GetLastTouchedTrack(),
     currentTouchedFx[3], currentTouchedFx[4]
   )}
-  if currentParamId[1] and (currentParamId[2] ~= oldParamId[2] or 
+  
+  if currentTouchedFx[1] and currentParamId[1] and 
+  (currentParamId[2] ~= oldParamId[2] or 
   currentParam[1] ~= oldParam[1]) then
+    
+    
+    fxName = {reaper.TrackFX_GetFXName(
+      reaper.GetLastTouchedTrack(), 
+      currentTouchedFx[3]
+    )}
+    paramName = {reaper.TrackFX_GetParamName(
+      reaper.GetLastTouchedTrack(), 
+      currentTouchedFx[3],
+      currentTouchedFx[4]
+    )}
+    paramText = fxName[2]..": "..paramName[2]
+    
     oldParamId[2] = currentParamId[2]
     oldParam[1] = currentParam[1]
     table.insert(fxs, currentTouchedFx[3])
     table.insert(params, currentTouchedFx[4])
     table.insert(minValues, currentParam[2])
     table.insert(maxValues, currentParam[3])
-    gotCC =  false
-    reaper.ShowConsoleMsg("Learned Param\n")
+    table.insert(fxNames, paramText)
+    if learningState then gotCC =  false end
+    reaper.ShowConsoleMsg("returning from learnParam()\n")
     return
   end
 end
@@ -163,7 +186,7 @@ function ui()
     learnBtnBounds[2],
     learnBtnBounds[3],
     learnBtnBounds[4],
-    false
+    learningState
   )
   gfx.rect(
     quitBtnBounds[1],
@@ -197,18 +220,17 @@ function ui()
   gfx.x = 10
   gfx.y = 10
   gfx.drawstr("Learn")
-  gfx.x = 240
+  gfx.x = 345
   gfx.y = 10
   gfx.drawstr("Quit")
-  if learningState then
-    gfx.x = 75
-    gfx.y = 10
-    gfx.drawstr(learningStateText)
-  end
+  
+  gfx.x = 75
+  gfx.y = 10
+  gfx.drawstr(learningStateText)
   
   gfx.x = 5
   gfx.y = 30
-  gfx.drawstr(uiInfo)
+  gfx.drawstr(mappedCCsText)
        
 end
 
