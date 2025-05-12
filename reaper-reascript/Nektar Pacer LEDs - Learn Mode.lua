@@ -8,56 +8,59 @@
 --msgType = inputEvent[2]:byte(1) & 0xF0
 
 deviceMode = 23 -- 16 + reaper midi output device id.
-ccCount = 2 -- 2 for two pedals
-
+maxLearnCount = 2 -- 2 for two pedals, starts at one.
 learnBtnBounds = {5, 5, 60, 20}
 quitBtnBounds = {235, 5, 60, 20}
-learnBtnToggleState = false
 terminate = false
 learningState = false
 learningStateText = ""
+uiInfo = "Some ui info to add to."
 gotCC = false
 ccs = {}
-fx = {}
+fxs = {}
 params = {}
 minValues = {}
 maxValues = {}
 oldInputEvent = {reaper.MIDI_GetRecentInputEvent(0)}
-inputEvent = nil
-lastTouchedFx = {reaper.GetLastTouchedFX()}
-lastParamId = {
+oldTouchedFx = {reaper.GetLastTouchedFX()}
+if not oldTouchedFx[1] then
+  reaper.ShowConsoleMsg("No Touched FX globally")
+end
+oldParamId = {
   reaper.TrackFX_GetParamIdent(
     reaper.GetLastTouchedTrack(), 
-    lastTouchedFx[3],
-    lastTouchedFx[4]
+    oldTouchedFx[3],
+    oldTouchedFx[4]
   )
 }
-lastParam = {reaper.TrackFX_GetParam(
+oldParam = {reaper.TrackFX_GetParam(
   reaper.GetLastTouchedTrack(),
-  lastTouchedFx[3],
-  lastTouchedFx[4]
+  oldTouchedFx[3],
+  oldTouchedFx[4]
 )}
 reaper.ClearConsole()
 
 function main()
-  gfx.init("Learn CCs then Params", 300, 100)
-  ui()
-  if learningState and #ccs < ccCount then
-    if not gotCC then
-      learningStateText = "Learning CC"
-      reaper.runloop(getCC())
-    else
-      learningStateText = "Learning Param"
-      reaper.runloop(getParam())
-    end
-  elseif #params > 0 then
-    setParam()
-    setLeds()
-  end
-
   if terminate then 
     return
   end
+  gfx.init("Learn CCs then Params", 300, 100)
+  ui()
+  
+  if learningState then
+    if #params < maxLearnCount then
+      if not gotCC then
+        reaper.runloop(learnCC())
+      else
+        reaper.runloop(learnParam())
+      end
+    else
+      learningState = false
+    end
+  elseif #params > 0 then
+    setParamAndLed()
+  end
+  
   reaper.defer(main)
 end
 
@@ -77,90 +80,78 @@ function getInputEvent()
   end
 end
 
-function getCC()
+function learnCC()
+  learningStateText = "Learning CC"
   inputEvent = getInputEvent()
   if inputEvent[1] then
     table.insert(ccs, inputEvent[2])
     gotCC = true
-    reaper.ShowConsoleMsg("returning from getCC()\n")
+    reaper.ShowConsoleMsg("Learned CC\n")
     return
   end
-  inputEvent = nil
 end
 
-function getParam() 
-  lastTouchedFx = {reaper.GetLastTouchedFX()}
+function learnParam() 
+  learningStateText = "Learning Param"
+  currentTouchedFx = {reaper.GetLastTouchedFX()}
+  if not currentTouchedFx[1] then
+    reaper.ShowConsoleMsg("No Touched FX in learnParam")
+  end
   currentParamId = {reaper.TrackFX_GetParamIdent(
     reaper.GetLastTouchedTrack(), 
-    lastTouchedFx[3], lastTouchedFx[4]
+    currentTouchedFx[3], currentTouchedFx[4]
   )}
   currentParam = {reaper.TrackFX_GetParam(
     reaper.GetLastTouchedTrack(),
-    lastTouchedFx[3],
-    lastTouchedFx[4]
+    currentTouchedFx[3], currentTouchedFx[4]
   )}
-  if currentParamId[1] and (currentParamId[2] ~= lastParamId[2] or 
-  currentParam[1] ~= lastParam[1]) then
-    lastParamId[2] = currentParamId[2]
-    lastParam[1] = currentParam[1]
-    table.insert(fx, lastTouchedFx[3])
-    table.insert(params, lastTouchedFx[4])
+  if currentParamId[1] and (currentParamId[2] ~= oldParamId[2] or 
+  currentParam[1] ~= oldParam[1]) then
+    oldParamId[2] = currentParamId[2]
+    oldParam[1] = currentParam[1]
+    table.insert(fxs, currentTouchedFx[3])
+    table.insert(params, currentTouchedFx[4])
     table.insert(minValues, currentParam[2])
     table.insert(maxValues, currentParam[3])
     gotCC =  false
-    reaper.ShowConsoleMsg("returning from getParam\n")
+    reaper.ShowConsoleMsg("Learned Param\n")
     return
   end
 end
 
-function setParam()
+function setParamAndLed(track)
   inputEvent = getInputEvent()
   if inputEvent[1] then
-    reaper.ShowConsoleMsg("setParam: getInputEvent[1] successful.\n")
     cc = inputEvent[2]
     ccValue = inputEvent[3]
-    for i = 1, #ccs do
+    channel = inputEvent[4]
+    msgType = inputEvent[5]
+    for i = 1, #params do
       if cc == ccs[i] then
         if ccValue == 0 then
           reaper.TrackFX_SetParam(
             reaper.GetLastTouchedTrack(),
-            fx[i],
-            params[i], 
-            minValues[i]
+            fxs[i] ,params[i],  minValues[i]
           )
-  
         else 
           reaper.TrackFX_SetParam(
-            reaper.GetLastTouchedTrack(), 
-            fx[i], 
-            params[i], 
-            maxValues[i]
+            reaper.GetLastTouchedTrack(),
+            fxs[i], params[i], maxValues[i]
           )
-       end
-     end
-   end
- end
-end
-
-function setLeds()
-  if inputEvent[1] then
-    reaper.ShowConsoleMsg("setLeds: getInputEvent[1] successful.\n")
-    for i = 1, #params do
-      channel = inputEvent[4]
-      msgType = inputEvent[5]
-      paramInfo = {reaper.TrackFX_GetParam(
-        reaper.GetLastTouchedTrack(), fx[i], params[i]
-      )}
-      if paramInfo[1] == 0 then
-        reaper.ShowConsoleMsg("Setting led low")
-        reaper.StuffMIDIMessage(
-          deviceMode, msgType + channel, ccs[i], 0
-        )
-      else 
-        reaper.ShowConsoleMsg("Setting led high")
-        reaper.StuffMIDIMessage(
-          deviceMode, msgType + channel, ccs[i], 127
-        )
+        end
+        paramInfo = {reaper.TrackFX_GetParam(
+          reaper.GetLastTouchedTrack(), fxs[i], params[i]
+        )}
+        if paramInfo[1] == 0 then
+          reaper.StuffMIDIMessage(
+            deviceMode, msgType + channel, ccs[i], 0
+          )
+        else 
+          reaper.StuffMIDIMessage(
+            deviceMode, msgType + channel, ccs[i], 127
+          )
+    
+        end
       end
     end
   end
@@ -192,7 +183,6 @@ function ui()
     gotCC = false
     learningState = not learningState
   end
- 
   if mouseState and 
   not lastMouseState and
   gfx.mouse_x > quitBtnBounds[1] and
@@ -202,7 +192,6 @@ function ui()
     terminate = true
   end
   lastMouseState = mouseState
-  
   --[[learnBtnBounds = {5, 5, 60, 20}
   quitBtnBounds = {235, 5, 60, 20}]]
   gfx.x = 10
@@ -211,12 +200,15 @@ function ui()
   gfx.x = 240
   gfx.y = 10
   gfx.drawstr("Quit")
-  
   if learningState then
     gfx.x = 75
     gfx.y = 10
     gfx.drawstr(learningStateText)
   end
+  
+  gfx.x = 5
+  gfx.y = 30
+  gfx.drawstr(uiInfo)
        
 end
 
