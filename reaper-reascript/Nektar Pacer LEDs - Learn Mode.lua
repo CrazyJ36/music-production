@@ -78,6 +78,8 @@ oldParam = {reaper.TrackFX_GetParam(
   oldTouchedFx[4]
 )}
 
+gfx.init(scriptName, 400, 300)
+
 function main()
   if terminate then 
     return
@@ -104,14 +106,17 @@ function main()
 
   mappedCCsText = ""
   for i = 1, #fxNames do
+    if tracks[i] == 0 then
+      trackText = "Master"
+    else 
+      trackText = tracks[i]
+    end
     mappedCCsText = mappedCCsText.."CC "..
-      ccs[i].." is mapped to track "..tracks[i]..":\n"..fxNames[i].."\n\n"
+      ccs[i].." is mapped to track "..trackText..":\n"..fxNames[i].."\n\n"
   end
-  
-  gfx.init(scriptName, 400, 300)
+
   ui()
   reaper.defer(main)
-
 end
 
 function getInputEvent() 
@@ -157,8 +162,10 @@ function learnParam()
   )}
   
   if currentTouchedFx[1] and currentParamId[1] and 
+  currentTouchedFx[4] ~= oldTouchedFx[4] and
   (currentParamId[2] ~= oldParamId[2] or 
   currentParam[1] ~= oldParam[1]) then
+    oldTouchedFx[4] = currentTouchedFx[4]
     oldParamId[2] = currentParamId[2]
     oldParam[1] = currentParam[1]
     fxName = {reaper.TrackFX_GetFXName(
@@ -192,17 +199,17 @@ function learnParam()
   end
 end
 
-function setParamAndLed(track)
+function setParamAndLed()
   inputEvent = getInputEvent()
   if inputEvent[1] then
-    
     for i = 1, #fxNames do
       if inputEvent[2] == tonumber(ccs[i]) then
         if tonumber(tracks[i]) > 0 then
+          -- set param
           if inputEvent[3] == 0 then
             reaper.TrackFX_SetParam(
               reaper.GetTrack(0, tracks[i] - 1),
-              fxs[i] ,params[i],  minValues[i]
+              fxs[i], params[i],  minValues[i]
             )
           else 
             reaper.TrackFX_SetParam(
@@ -210,7 +217,7 @@ function setParamAndLed(track)
               fxs[i], params[i], maxValues[i]
             )
           end
-          
+          -- set led
           paramInfo = {reaper.TrackFX_GetParam(
             reaper.GetTrack(0, tracks[i] - 1), fxs[i], params[i]
           )}
@@ -225,8 +232,35 @@ function setParamAndLed(track)
               deviceMode, msgType + channel, ccs[i], 127
             )
           end
+          
         else
-          reaper.ShowConsoleMsg("Can't control Master track yet.\n")
+          -- set param for master
+          if inputEvent[3] == 0 then
+            reaper.TrackFX_SetParam(
+              reaper.GetMasterTrack(0),
+                fxs[i], params[i], minValues[i]
+              )
+          else
+            reaper.TrackFX_SetParam(
+              reaper.GetMasterTrack(0),
+              fxs[i], params[i], maxValues[i]
+            )
+          end
+          -- set led for master
+          paramInfo = {reaper.TrackFX_GetParam(
+            reaper.GetMasterTrack(0), fxs[i], params[i]
+          )}
+          channel = inputEvent[4]
+          msgType = inputEvent[5]
+          if paramInfo[1] == 0 then
+            reaper.StuffMIDIMessage(
+              deviceMode, msgType + channel, ccs[i], 0
+            )
+          else 
+            reaper.StuffMIDIMessage(
+              deviceMode, msgType + channel, ccs[i], 127
+            )
+          end
         end
       end
     end
