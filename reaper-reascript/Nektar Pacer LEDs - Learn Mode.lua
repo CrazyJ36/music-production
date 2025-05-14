@@ -6,8 +6,8 @@
 --cc = msg:byte(2)
 --ccValue = msg:byte(3)
 --msgType = inputEvent[2]:byte(1) & 0xF0
-reaper.ClearConsole()
 
+reaper.ClearConsole()
 scriptName = "Nektar Pacer LEDs - Learn Mode"
 deviceMode = 23 -- 16 + reaper midi output device id.
 maxLearnCount = 4 -- starts at one.
@@ -195,35 +195,38 @@ end
 function setParamAndLed(track)
   inputEvent = getInputEvent()
   if inputEvent[1] then
-    cc = inputEvent[2]
-    ccValue = inputEvent[3]
-    channel = inputEvent[4]
-    msgType = inputEvent[5]
+    
     for i = 1, #fxNames do
-      if cc == ccs[i] then
-        -- if fxName == bypass, switch min and max values.
-        if ccValue == 0 then
-          reaper.TrackFX_SetParam(
-            reaper.GetTrack(0, tracks[i] - 1),
-            fxs[i] ,params[i],  minValues[i]
-          )
-        else 
-          reaper.TrackFX_SetParam(
-            reaper.GetTrack(0, tracks[i] - 1),
-            fxs[i], params[i], maxValues[i]
-          )
-        end
-        paramInfo = {reaper.TrackFX_GetParam(
-          reaper.GetTrack(0, tracks[i] - 1), fxs[i], params[i]
-        )}
-        if paramInfo[1] == 0 then
-          reaper.StuffMIDIMessage(
-            deviceMode, msgType + channel, ccs[i], 0
-          )
-        else 
-          reaper.StuffMIDIMessage(
-            deviceMode, msgType + channel, ccs[i], 127
-          )
+      if inputEvent[2] == tonumber(ccs[i]) then
+        if tonumber(tracks[i]) > 0 then
+          if inputEvent[3] == 0 then
+            reaper.TrackFX_SetParam(
+              reaper.GetTrack(0, tracks[i] - 1),
+              fxs[i] ,params[i],  minValues[i]
+            )
+          else 
+            reaper.TrackFX_SetParam(
+              reaper.GetTrack(0, tracks[i] - 1),
+              fxs[i], params[i], maxValues[i]
+            )
+          end
+          
+          paramInfo = {reaper.TrackFX_GetParam(
+            reaper.GetTrack(0, tracks[i] - 1), fxs[i], params[i]
+          )}
+          channel = inputEvent[4]
+          msgType = inputEvent[5]
+          if paramInfo[1] == 0 then
+            reaper.StuffMIDIMessage(
+              deviceMode, msgType + channel, ccs[i], 0
+            )
+          else 
+            reaper.StuffMIDIMessage(
+              deviceMode, msgType + channel, ccs[i], 127
+            )
+          end
+        else
+          reaper.ShowConsoleMsg("Can't control Master track yet.\n")
         end
       end
     end
@@ -299,7 +302,6 @@ gfx.line(0, 55, 400, 55)
     minValues = {}
     maxValues = {}
     fxNames = {}
- 
     reaper.SetExtState(scriptName, "tracks", table.concat(tracks, ","), false)
     reaper.SetExtState(scriptName, "ccs", table.concat(ccs, ","), false)
     reaper.SetExtState(scriptName, "fxs", table.concat(fxs, ","), false)
