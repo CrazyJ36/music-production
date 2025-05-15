@@ -1,5 +1,4 @@
 --[[
-  Work in progress.
   Specifically made for Nektar Pacer foot controller.
   Causes Reaper learned param changes to reflect on Pacer LEDs if
   its switches are set to CC and LED > Midi on.
