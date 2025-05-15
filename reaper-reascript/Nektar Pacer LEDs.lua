@@ -12,8 +12,6 @@
   directory there. Then in the Reaper Actions menu > Show actions list > New action >
   Load reascript > select this script file > then run it whenever you want your LEDs
   to react to changes in the DAW. 
-  
-  TODO: GetNamedConfigParm > param.X.learn.flags > react to selected track only, etc.
 ]]
 midiOutput = 23 -- CHANGE THIS to 16 + reaper midi output device id.
 
@@ -27,36 +25,38 @@ function run()
     if msgType == 176 then
       fx = {reaper.GetLastTouchedFX()}
       if fx[1] then
-      
-        mappedCC = {reaper.TrackFX_GetNamedConfigParm(
-          reaper.GetLastTouchedTrack(),
-          fx[3],
-          "param."..fx[4]..".learn.midi2"
-        )}
-        
-        if mappedCC[1] then
-          --reaper.ShowConsoleMsg("mappedCC for last Param: "..mappedCC[2].."\n")
-        
-          paramInfo = {reaper.TrackFX_GetParam(
-            reaper.GetLastTouchedTrack(), 
-            fx[3], 
-            fx[4]
+        for i = 1, reaper.CountTracks(0) do
+          track = reaper.GetTrack(0, i - 1)
+          mappedCC = {reaper.TrackFX_GetNamedConfigParm(
+            track,
+            fx[3],
+            "param."..fx[4]..".learn.midi2"
           )}
-          if paramInfo[1] == 0 then
-            reaper.StuffMIDIMessage(midiOutput, msgType + channel, mappedCC[2], 0)
+          
+          if mappedCC[1] then
+            --reaper.ShowConsoleMsg("mappedCC for last Param: "..mappedCC[2].." on track: "..i.."\n")
+          
+            paramInfo = {reaper.TrackFX_GetParam(
+              track, 
+              fx[3], 
+              fx[4]
+            )}
+            if paramInfo[1] == 0 then
+              reaper.StuffMIDIMessage(midiOutput, msgType + channel, mappedCC[2], 0)
+            else 
+              reaper.StuffMIDIMessage(midiOutput, msgType + channel, mappedCC[2], 127)
+            end
+           
           else 
-            reaper.StuffMIDIMessage(midiOutput, msgType + channel, mappedCC[2], 127)
+            --reaper.ShowConsoleMsg("No mapped CCs for param\n")
           end
-         
-        else 
-          --reaper.ShowConsoleMsg("No mapped CCs for param\n")
         end
         
       else 
         --reaper.ShowConsoleMsg("No valid last touched FX parameter\n")
       end
     else 
-      --reaper.ShowConsoleMsg("Only supports CC messages")
+     -- reaper.ShowConsoleMsg("Only supports CC messages")
     end
   else 
     --reaper.ShowConsoleMsg("No recent MIDI input event\n")
