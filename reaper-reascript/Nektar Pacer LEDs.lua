@@ -2,10 +2,20 @@
   Work in progress.
   Specifically made for Nektar Pacer foot controller.
   Causes Reaper learned param changes to reflect on Pacer LEDs if
-  its switches are set to LED > Midi on.
+  its switches are set to CC and LED > Midi on.
+  
+  To use  reaper: 
+  Download or copy this script text to A new file, find your PACER midi output ID in Reapers' 
+  Options menu > Preferences > Midi Outputs > and change the first 'midiOutput' line here 
+  to 16 + Id number. Then find your Reaper resources directory by clicking the Options menu
+  in Reaper > Show REAPER resource path in explorer > then save this script in to the 'Scripts'
+  directory there. Then in the Reaper Actions menu > Show actions list > New action >
+  Load reascript > select this script file > then run it whenever you want your LEDs
+  to react to changes in the DAW. 
+  
+  TODO: GetNamedConfigParm > param.X.learn.flags > react to selected track only, etc.
 ]]
--- CCs are message type 11, or 176
-midiOutput = 23 -- 16 + reaper midi output device id.
+midiOutput = 23 -- CHANGE THIS to 16 + reaper midi output device id.
 
 reaper.ClearConsole()
 function run()
@@ -17,6 +27,7 @@ function run()
     if msgType == 176 then
       fx = {reaper.GetLastTouchedFX()}
       if fx[1] then
+      
         mappedCC = {reaper.TrackFX_GetNamedConfigParm(
           reaper.GetLastTouchedTrack(),
           fx[3],
@@ -24,7 +35,7 @@ function run()
         )}
         
         if mappedCC[1] then
-          reaper.ShowConsoleMsg("mappedCC for last Param: "..mappedCC[2].."\n")
+          --reaper.ShowConsoleMsg("mappedCC for last Param: "..mappedCC[2].."\n")
         
           paramInfo = {reaper.TrackFX_GetParam(
             reaper.GetLastTouchedTrack(), 
@@ -38,24 +49,24 @@ function run()
           end
          
         else 
-          reaper.ShowConsoleMsg("No mapped CCs for param\n")
+          --reaper.ShowConsoleMsg("No mapped CCs for param\n")
         end
         
       else 
-        reaper.ShowConsoleMsg("No valid last touched FX parameter\n")
+        --reaper.ShowConsoleMsg("No valid last touched FX parameter\n")
       end
     else 
-      reaper.ShowConsoleMsg("Only supports CC messages")
+      --reaper.ShowConsoleMsg("Only supports CC messages")
     end
   else 
-    reaper.ShowConsoleMsg("No recent MIDI input event\n")
+    --reaper.ShowConsoleMsg("No recent MIDI input event\n")
   end
 
   reaper.defer(run)
 end
 
 function onExit()
-  reaper.ShowConsoleMsg("Exited\n");
+  --reaper.ShowConsoleMsg("Terminated Nektar Pacer LEDs successfully.\n");
 end
 
 run()
