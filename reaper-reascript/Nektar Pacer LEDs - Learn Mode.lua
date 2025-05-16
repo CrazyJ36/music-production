@@ -57,10 +57,6 @@ if reaper.HasExtState(scriptName, "tracks") and
   for i in string.gmatch(storedFxNames, '([^,]+)') do
     table.insert(fxNames, i)
   end
-  
-  for i = 1, #fxNames do
-    reaper.ShowConsoleMsg("tracks: "..tracks[i].."\n")
-  end
 end
 
 oldInputEvent = {reaper.MIDI_GetRecentInputEvent(0)}
@@ -97,7 +93,19 @@ function main()
       learningStateText = "Max CCs Learned"
     end
   elseif #fxNames > 0 then
-    setParamAndLed()
+    inputEventIn = getInputEvent()
+    for i = 1, #fxNames do
+      if tonumber(tracks[i]) > 0 then
+        trackIn = reaper.GetTrack(0, tracks[i] - 1)
+      else
+        trackIn = reaper.GetMasterTrack(0)
+      end
+      if inputEventIn[1] then
+          setParam(inputEventIn, i, trackIn)
+      end
+  
+      setLed(i, trackIn)
+    end
   end
 
   if not learningState then
@@ -199,71 +207,34 @@ function learnParam()
   end
 end
 
-function setParamAndLed()
-  inputEvent = getInputEvent()
-  if inputEvent[1] then
-    for i = 1, #fxNames do
-      if inputEvent[2] == tonumber(ccs[i]) then
-        if tonumber(tracks[i]) > 0 then
-          -- set param
-          if inputEvent[3] == 0 then
-            reaper.TrackFX_SetParam(
-              reaper.GetTrack(0, tracks[i] - 1),
-              fxs[i], params[i],  minValues[i]
-            )
-          else 
-            reaper.TrackFX_SetParam(
-              reaper.GetTrack(0, tracks[i] - 1),
-              fxs[i], params[i], maxValues[i]
-            )
-          end
-          -- set led
-          paramInfo = {reaper.TrackFX_GetParam(
-            reaper.GetTrack(0, tracks[i] - 1), fxs[i], params[i]
-          )}
-          channel = inputEvent[4]
-          msgType = inputEvent[5]
-          if paramInfo[1] == 0 then
-            reaper.StuffMIDIMessage(
-              deviceMode, msgType + channel, ccs[i], 0
-            )
-          else 
-            reaper.StuffMIDIMessage(
-              deviceMode, msgType + channel, ccs[i], 127
-            )
-          end
-          
-        else
-          -- set param for master
-          if inputEvent[3] == 0 then
-            reaper.TrackFX_SetParam(
-              reaper.GetMasterTrack(0),
-                fxs[i], params[i], minValues[i]
-              )
-          else
-            reaper.TrackFX_SetParam(
-              reaper.GetMasterTrack(0),
-              fxs[i], params[i], maxValues[i]
-            )
-          end
-          -- set led for master
-          paramInfo = {reaper.TrackFX_GetParam(
-            reaper.GetMasterTrack(0), fxs[i], params[i]
-          )}
-          channel = inputEvent[4]
-          msgType = inputEvent[5]
-          if paramInfo[1] == 0 then
-            reaper.StuffMIDIMessage(
-              deviceMode, msgType + channel, ccs[i], 0
-            )
-          else 
-            reaper.StuffMIDIMessage(
-              deviceMode, msgType + channel, ccs[i], 127
-            )
-          end
-        end
-      end
+function setLed(i, trackOut) 
+  local recentInputEvent = {reaper.MIDI_GetRecentInputEvent(0)}
+  local channel = currentInputEvent[2]:byte(1) & 0x0F
+  local msgType = currentInputEvent[2]:byte(1) & 0xF0
+  paramInfo = {reaper.TrackFX_GetParam(
+    trackOut, fxs[i], params[i]
+  )}
+  if paramInfo[1] == 0 then
+    value = 0
+  else 
+    value = 127
+  end
+  reaper.StuffMIDIMessage(
+    deviceMode, msgType + channel, ccs[i], value
+  )
+end
+
+function setParam(inputEventOut, i, trackOut)
+  if inputEventOut[2] == tonumber(ccs[i]) then
+    if inputEventOut[3] == 0 then
+      value = minValues[i]
+    else
+      value = maxValues[i]
     end
+    reaper.TrackFX_SetParam(
+      trackOut,
+      fxs[i], params[i],  value
+    )
   end
 end
 

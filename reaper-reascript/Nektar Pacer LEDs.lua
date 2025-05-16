@@ -3,7 +3,7 @@
   Causes Reaper learned param changes to reflect on Pacer LEDs if
   its switches are set to CC and LED > Midi on.
   
-  To use  reaper: 
+  To use in reaper: 
   Download or copy this script text to A new file, find your PACER midi output ID in Reapers' 
   Options menu > Preferences > Midi Outputs > and change the first 'midiOutput' line here 
   to 16 + Id number. Then find your Reaper resources directory by clicking the Options menu
