@@ -1,22 +1,28 @@
 --[[
-  Specifically made for Nektar Pacer foot controller.
-  Causes Reaper learned param changes to reflect on Pacer LEDs if
+  Specifically made for Nektar Pacer MIDI foot controller.
+  Causes Reapers' 'learned' param changes in the DAW to reflect on Pacer LEDs if
   its switches are set to CC and LED > Midi on.
   
   To use in reaper: 
-  Download or copy this script text to A new file, find your PACER midi output ID in Reapers' 
-  Options menu > Preferences > Midi Outputs > and change the first 'midiOutput' line here 
-  to 16 + Id number. Then find your Reaper resources directory by clicking the Options menu
-  in Reaper > Show REAPER resource path in explorer > then save this script in to the 'Scripts'
-  directory there. Then in the Reaper Actions menu > Show actions list > New action >
-  Load reascript > select this script file > then run it whenever you want your LEDs
-  to react to changes in the DAW. 
+  Download or copy this script text to A new file, then find your Reaper resources directory 
+  by clicking the Options menu in Reaper > Show REAPER resource path in explorer > then save 
+  this script in to the 'Scripts' directory there. Then in the Reaper Actions menu > 
+  Show actions list > New action > Load reascript > select this script file > then run it 
+  whenever you want your LEDs to react to changes in the DAW. 
 ]]
-midiOutput = 23 -- CHANGE THIS to 16 + reaper midi output device id.
+--reaper.ClearConsole()
 
-reaper.ClearConsole()
+for i = 0, reaper.GetMaxMidiOutputs() do
+   midiOutName = {reaper.GetMIDIOutputName(i, "")}
+   if midiOutName[2] == "PACER" or midiOutName[2] == "PACER MIDI1" then
+     --reaper.ShowConsoleMsg("Pacer MIDI Output ID is "..i.."\n")
+     midiOutput = i + 16
+     break
+   end
+end
+
 function run()
- 
+
   inputEvent = {reaper.MIDI_GetRecentInputEvent(0)}
   if inputEvent[1] ~= 0 then
     channel = inputEvent[2]:byte(1) & 0x0F
