@@ -59,20 +59,15 @@ if reaper.HasExtState(scriptName, "tracks") and
   end
 end
 
+function getLastTrack(fx) 
+  if fx[2] == -1 then
+    return reaper.GetMasterTrack(0)
+  else
+    return reaper.GetTrack(0, fx[2])
+  end
+end
+
 oldInputEvent = {reaper.MIDI_GetRecentInputEvent(0)}
-oldTouchedFx = {reaper.GetLastTouchedFX()}
-oldParamId = {
-  reaper.TrackFX_GetParamIdent(
-    reaper.GetLastTouchedTrack(), 
-    oldTouchedFx[3],
-    oldTouchedFx[4]
-  )
-}
-oldParam = {reaper.TrackFX_GetParam(
-  reaper.GetLastTouchedTrack(),
-  oldTouchedFx[3],
-  oldTouchedFx[4]
-)}
 
 gfx.init(scriptName, 400, 300)
 
@@ -95,15 +90,14 @@ function main()
   elseif #fxNames > 0 then
     inputEventIn = getInputEvent()
     for i = 1, #fxNames do
-      if tonumber(tracks[i]) > 0 then
-        trackIn = reaper.GetTrack(0, tracks[i] - 1)
-      else
+      if tonumber(tracks[i]) == -1 then
         trackIn = reaper.GetMasterTrack(0)
+      else
+        trackIn = reaper.GetTrack(0, tracks[i])
       end
       if inputEventIn[1] then
           setParam(inputEventIn, i, trackIn)
       end
-  
       setLed(i, trackIn)
     end
   end
@@ -114,10 +108,10 @@ function main()
 
   mappedCCsText = ""
   for i = 1, #fxNames do
-    if tracks[i] == 0 then
+    if tonumber(tracks[i]) == -1 then
       trackText = "Master"
     else 
-      trackText = tracks[i]
+      trackText = tracks[i] + 1
     end
     mappedCCsText = mappedCCsText.."CC "..
       ccs[i].." is mapped to track "..trackText..":\n"..fxNames[i].."\n\n"
@@ -152,6 +146,14 @@ function learnCC()
       gotCC = true
       gotParam = false
     end
+    
+    oldTouchedFx = {reaper.GetTouchedOrFocusedFX(0)}
+    oldParam = {reaper.TrackFX_GetParam(
+      getLastTrack(oldTouchedFx),
+      oldTouchedFx[5],
+      oldTouchedFx[6]
+    )}
+    
     reaper.ShowConsoleMsg("returning from learnCC()\n")
     return
   end
@@ -159,35 +161,31 @@ end
 
 function learnParam() 
   learningStateText = "Learning Param"
-  currentTouchedFx = {reaper.GetLastTouchedFX()}
-  currentParamId = {reaper.TrackFX_GetParamIdent(
-    reaper.GetLastTouchedTrack(), 
-    currentTouchedFx[3], currentTouchedFx[4]
-  )}
+  currentTouchedFx = {reaper.GetTouchedOrFocusedFX(0)}
   currentParam = {reaper.TrackFX_GetParam(
-    reaper.GetLastTouchedTrack(),
-    currentTouchedFx[3], currentTouchedFx[4]
+    getLastTrack(currentTouchedFx),
+    currentTouchedFx[5], currentTouchedFx[6]
   )}
   
-  if currentTouchedFx[1] and currentParamId[1] and 
-  currentTouchedFx[4] ~= oldTouchedFx[4] and
-  (currentParamId[2] ~= oldParamId[2] or 
+  if currentTouchedFx[1] and
+  (currentTouchedFx[6] ~= oldTouchedFx[6] or
   currentParam[1] ~= oldParam[1]) then
-    oldTouchedFx[4] = currentTouchedFx[4]
-    oldParamId[2] = currentParamId[2]
+    
+    oldTouchedFx[6] = currentTouchedFx[6]
     oldParam[1] = currentParam[1]
+    
     fxName = {reaper.TrackFX_GetFXName(
-      reaper.GetLastTouchedTrack(), 
-      currentTouchedFx[3]
+      getLastTrack(currentTouchedFx), 
+      currentTouchedFx[5]
     )}
     paramName = {reaper.TrackFX_GetParamName(
-      reaper.GetLastTouchedTrack(), 
-      currentTouchedFx[3],
-      currentTouchedFx[4]
+      getLastTrack(currentTouchedFx), 
+      currentTouchedFx[5],
+      currentTouchedFx[6]
     )}
     table.insert(tracks, currentTouchedFx[2])
-    table.insert(fxs, currentTouchedFx[3])
-    table.insert(params, currentTouchedFx[4])
+    table.insert(fxs, currentTouchedFx[5])
+    table.insert(params, currentTouchedFx[6])
     table.insert(minValues, currentParam[2])
     table.insert(maxValues, currentParam[3])
     table.insert(fxNames, fxName[2]..": "..paramName[2])
