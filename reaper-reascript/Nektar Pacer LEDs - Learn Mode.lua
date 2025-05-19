@@ -8,9 +8,15 @@
 --msgType = inputEvent[2]:byte(1) & 0xF0
 
 reaper.ClearConsole()
+for i = 0, reaper.GetMaxMidiOutputs() do
+   midiOutName = {reaper.GetMIDIOutputName(i, "")}
+   if midiOutName[2] == "PACER" or midiOutName[2] == "PACER MIDI1" then
+     midiOutput = i + 16
+     break
+   end
+end
 scriptName = "Nektar Pacer LEDs - Learn Mode"
-deviceMode = 23 -- 16 + reaper midi output device id.
-maxLearnCount = 4 -- starts at one.
+maxLearnCount = 3 -- starts at one.
 learnBtnBounds = {5, 5, 60, 20}
 quitBtnBounds = {335, 5, 60, 20}
 resetBtnBounds = {335, 30, 60, 20}
@@ -85,7 +91,6 @@ function main()
       end
     else
       learningState = false
-      learningStateText = "Max CCs Learned"
     end
   elseif #fxNames > 0 then
     inputEventIn = getInputEvent()
@@ -103,7 +108,11 @@ function main()
   end
 
   if not learningState then
-    learningStateText = "Press Learn"
+    if #fxNames < maxLearnCount then
+      learningStateText = "Press Learn"
+    else
+      learningStateText = "Max CCs Learned"
+    end
   end
 
   mappedCCsText = ""
@@ -218,7 +227,7 @@ function setLed(i, trackOut)
     value = 127
   end
   reaper.StuffMIDIMessage(
-    deviceMode, msgType + channel, ccs[i], value
+    midiOutput, msgType + channel, ccs[i], value
   )
 end
 
