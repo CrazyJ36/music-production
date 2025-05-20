@@ -131,7 +131,7 @@ function main()
       mappedCCsText = mappedCCsText.."CC "..
         ccs[i].." is mapped to track "..trackText..":\n"..fxNames[i].."\n\n"
     end
-  
+
   else
     learningStateText = "Press Setup"
     mappedCCsText = ""
@@ -236,7 +236,7 @@ function setLed(i, trackOut)
     value = 127
   end
   reaper.StuffMIDIMessage(
-    midiOutputId, 176 + midiChannel, ccs[i], value
+    midiOutputId + 16, 176 + midiChannel - 1, ccs[i], value
   )
 end
 
@@ -361,15 +361,15 @@ gfx.line(0, 55, 400, 55)
       reaper.GetExtState(scriptName, "midiChannel")
   )}
   if setupInput[1] then
-    local result = {}
-    for field in string.gmatch(setupInput[2]..",", '([^,]*),') do
-      table.insert(result, field)
+    local inputValues = {}
+    for value in string.gmatch(setupInput[2]..",", '([^,]*),') do
+      table.insert(inputValues, tonumber(value))
     end
     for i = 1, 2 do
       if i == 1 then 
-        midiOutputId = result[i]
+        midiOutputId = inputValues[i]
       else 
-        midiChannel = result[i]
+        midiChannel = inputValues[i]
       end
     end
     reaper.SetExtState(scriptName, "midiOutputId", midiOutputId, true)
