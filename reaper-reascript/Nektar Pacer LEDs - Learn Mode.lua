@@ -120,6 +120,7 @@ function main()
         learningStateText = "Max CCs Learned"
       end
     end
+    
     mappedCCsText = ""
     for i = 1, #fxNames do
       if tonumber(tracks[i]) == -1 then
@@ -130,8 +131,9 @@ function main()
       mappedCCsText = mappedCCsText.."CC "..
         ccs[i].." is mapped to track "..trackText..":\n"..fxNames[i].."\n\n"
     end
+  
   else
-    learningStateText = "Press Setup!"
+    learningStateText = "Press Setup"
     mappedCCsText = ""
     learningState = false
   end
@@ -354,28 +356,21 @@ gfx.line(0, 55, 400, 55)
   gfx.mouse_y < setupBtnBounds[4] + setupBtnBounds[2] then
   
   setupInput = {reaper.GetUserInputs(
-    "Setup", 2, "MIDI Output Device ID,MIDI Channel of Device", 
-    midiOutputId..","..midiChannel
+    "Setup", 2, "MIDI Output Device ID,MIDI Device Channel", 
+    reaper.GetExtState(scriptName,"midiOutputId")..","..
+      reaper.GetExtState(scriptName, "midiChannel")
   )}
-
   if setupInput[1] then
-    string = setupInput[2]
-    reaper.ShowConsoleMsg("input string:"..string.."\n")
-    iter = 0
-    for i in string.gmatch(string, "[^,]+") do
-       if string.find(i, "") then
-         reaper.ShowConsoleMsg("i is blank at "..iter.."\n")
-       end
-       if iter == 0 then midiOutputId = i
-       else midiChannel = i
-       end
-       iter = iter + 1
+    local result = {}
+    for field in string.gmatch(setupInput[2]..",", '([^,]*),') do
+      table.insert(result, field)
     end
-    if midiOutputId == "" then
-      reaper.ShowConsoleMsg("no output id\n")
-    end
-    if midiChannel == "" then
-      reaper.ShowConsoleMsg("no channel\n")
+    for i = 1, 2 do
+      if i == 1 then 
+        midiOutputId = result[i]
+      else 
+        midiChannel = result[i]
+      end
     end
     reaper.SetExtState(scriptName, "midiOutputId", midiOutputId, true)
     reaper.SetExtState(scriptName, "midiChannel", midiChannel, true)
