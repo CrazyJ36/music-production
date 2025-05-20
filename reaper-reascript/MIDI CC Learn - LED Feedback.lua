@@ -2,13 +2,8 @@
   WORK IN PROGRESS
 ]]
 
---channel = msg:byte(1) & 0x0F
---cc = msg:byte(2)
---ccValue = msg:byte(3)
---msgType = inputEvent[2]:byte(1) & 0xF0
-
 reaper.ClearConsole()
-scriptName = "Nektar Pacer LEDs - Learn Mode"
+scriptName = "Learn Mode - LED Feedback"
 maxLearnCount = 128 -- starts at one.
 learnBtnBounds = {5, 5, 60, 20}
 quitBtnBounds = {335, 5, 60, 20}
@@ -101,16 +96,26 @@ function main()
       end
     elseif #fxNames > 0 then
       inputEventIn = getInputEvent()
-      for i = 1, #fxNames do
-        if tonumber(tracks[i]) == -1 then
-          trackIn = reaper.GetMasterTrack(0)
-        else
-          trackIn = reaper.GetTrack(0, tracks[i])
+      if reaper.CountTracks(0) > 0 then
+        for i = 1, #fxNames do
+          if tonumber(tracks[i]) == -1 then
+            trackIn = reaper.GetMasterTrack(0)
+          else
+            trackIn = reaper.GetTrack(0, tracks[i])
+          end
+          if inputEventIn[1] then
+              setParam(inputEventIn, i, trackIn)
+          end
+          setLed(i, trackIn)
         end
-        if inputEventIn[1] then
-            setParam(inputEventIn, i, trackIn)
+      
+      else 
+        for i = 1, #fxNames do
+          if inputEventIn[1] then
+            setParam(inputEventIn, i, reaper.GetMasterTrack(0))
+          end
+          setLed(i, reaper.GetMasterTrack(0))
         end
-        setLed(i, trackIn)
       end
     end
     if not learningState then
