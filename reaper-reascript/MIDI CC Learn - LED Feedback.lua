@@ -3,7 +3,7 @@
 ]]
 
 reaper.ClearConsole()
-scriptName = "Learn Mode - LED Feedback"
+scriptName = "MIDI CC Learn - LED Feedback"
 maxLearnCount = 128 -- starts at one.
 learnBtnBounds = {5, 5, 60, 20}
 quitBtnBounds = {335, 5, 60, 20}
@@ -172,15 +172,12 @@ function learnCC()
       gotCC = true
       gotParam = false
     end
-    
     oldTouchedFx = {reaper.GetTouchedOrFocusedFX(0)}
     oldParam = {reaper.TrackFX_GetParam(
       getLastTrack(oldTouchedFx),
       oldTouchedFx[5],
       oldTouchedFx[6]
     )}
-    
-    reaper.ShowConsoleMsg("returning from learnCC()\n")
     return
   end
 end
@@ -226,7 +223,6 @@ function learnParam()
       gotParam = true
       gotCC = false
     end
-    reaper.ShowConsoleMsg("returning from learnParam()\n")
     return
   end
 end
@@ -240,9 +236,9 @@ function setLed(i, trackOut)
   else 
     value = 127
   end
-  reaper.StuffMIDIMessage(
-    midiOutputId + 16, 176 + midiChannel - 1, ccs[i], value
-  )
+  --reaper.StuffMIDIMessage(
+    --midiOutputId + 16, 176 + midiChannel - 1, ccs[i], value
+  --)
 end
 
 function setParam(inputEventOut, i, trackOut)
@@ -368,15 +364,24 @@ gfx.line(0, 55, 400, 55)
   if setupInput[1] then
     local inputValues = {}
     for value in string.gmatch(setupInput[2]..",", '([^,]*),') do
-      table.insert(inputValues, tonumber(value))
+      table.insert(inputValues, value)
     end
     for i = 1, 2 do
       if i == 1 then 
-        midiOutputId = inputValues[i]
+        if inputValues[i] == "" or tonumber(inputValues[i]) == nil then
+          midiOutputId = ""
+        else
+          midiOutputId = tonumber(inputValues[i])
+        end
       else 
-        midiChannel = inputValues[i]
+        if inputValues[i] == "" or tonumber(inputValues[i]) == nil then
+          midiChannel = ""
+        else 
+          midiChannel = tonumber(inputValues[i])
+        end
       end
     end
+    
     reaper.SetExtState(scriptName, "midiOutputId", midiOutputId, true)
     reaper.SetExtState(scriptName, "midiChannel", midiChannel, true)
   end
@@ -394,7 +399,6 @@ gfx.line(0, 55, 400, 55)
 end
 
 function onExit()
-  reaper.ShowConsoleMsg("Exited")
   gfx.quit()
 end
 
