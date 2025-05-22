@@ -21,48 +21,21 @@ if reaper.HasExtState(scriptName, "midiChannel") then
 else
   midiChannel = ""
 end
-
-tracks = {}
-ccs = {}
-fxs = {}
-params = {}
-minValues = {}
-maxValues = {}
-fxNames = {}
-if reaper.HasExtState(scriptName, "tracks") and 
-  reaper.HasExtState(scriptName, "ccs") and
-  reaper.HasExtState(scriptName, "fxs") and
-  reaper.HasExtState(scriptName, "params") and
-  reaper.HasExtState(scriptName, "minValues") and
-  reaper.HasExtState(scriptName, "maxValues") and
-  reaper.HasExtState(scriptName, "fxNames") then
-  storedTracks = reaper.GetExtState(scriptName, "tracks")
-  storedCCs = reaper.GetExtState(scriptName, "ccs")
-  storedFxs = reaper.GetExtState(scriptName, "fxs")
-  storedParams = reaper.GetExtState(scriptName, "params")
-  storedMinValues = reaper.GetExtState(scriptName, "minValues")
-  storedMaxValues = reaper.GetExtState(scriptName, "maxValues")
-  storedFxNames = reaper.GetExtState(scriptName, "fxNames")
-  for i in string.gmatch(storedTracks, '([^,]+)') do
-    table.insert(tracks, i)
-  end
-  for i in string.gmatch(storedCCs, '([^,]+)') do
-    table.insert(ccs, i)
-  end
-  for i in string.gmatch(storedFxs, '([^,]+)') do
-    table.insert(fxs, i)
-  end
-  for i in string.gmatch(storedParams, '([^,]+)') do
-    table.insert(params, i)
-  end
-  for i in string.gmatch(storedMinValues, '([^,]+)') do
-    table.insert(minValues, i)
-  end
-  for i in string.gmatch(storedMaxValues, '([^,]+)') do
-    table.insert(maxValues, i)
-  end
-  for i in string.gmatch(storedFxNames, '([^,]+)') do
-    table.insert(fxNames, i)
+  
+values = {
+  [1] = {}, -- tracks
+  [2] = {}, -- ccs
+  [3] = {}, -- fxs
+  [4] = {}, -- params
+  [5] = {}, -- minValues
+  [6] = {}, -- maxValues
+  [7] = {} -- fxNames
+}
+if reaper.HasExtState(scriptName, "values") then
+  for i = 1, #values do
+     for j in string.gmatch(reaper.GetExtState(scriptName, "values"..i), "[^,]+") do
+       table.insert(values[i], j)
+     end
   end
 end
 
@@ -82,10 +55,9 @@ function main()
   if terminate then 
     return
   end
-
   if midiOutputId ~= "" and midiChannel ~= "" then
     if learningState then
-      if #fxNames < maxLearnCount then
+      if #values[7] < maxLearnCount then
         if not gotCC then
           reaper.runloop(learnCC())
         elseif not gotParam then
@@ -94,14 +66,14 @@ function main()
       else
         learningState = false
       end
-    elseif #fxNames > 0 then
+    elseif #values[7] > 0 then
       inputEventIn = getInputEvent()
       if reaper.CountTracks(0) > 0 then
-        for i = 1, #fxNames do
-          if tonumber(tracks[i]) == -1 then
+        for i = 1, #values[7] do
+          if tonumber(values[1][i]) == -1 then
             trackIn = reaper.GetMasterTrack(0)
           else
-            trackIn = reaper.GetTrack(0, tracks[i])
+            trackIn = reaper.GetTrack(0, values[1][i])
           end
           if inputEventIn[1] then
               setParam(inputEventIn, i, trackIn)
@@ -109,8 +81,8 @@ function main()
           setLed(i, trackIn)
         end
       
-      else 
-        for i = 1, #fxNames do
+      else
+        for i = 1, #values[7] do
           if inputEventIn[1] then
             setParam(inputEventIn, i, reaper.GetMasterTrack(0))
           end
@@ -119,7 +91,7 @@ function main()
       end
     end
     if not learningState then
-      if #fxNames < maxLearnCount then
+      if #values[7] < maxLearnCount then
         learningStateText = "Press Learn"
       else
         learningStateText = "Max CCs Learned"
@@ -127,14 +99,15 @@ function main()
     end
     
     mappedCCsText = ""
-    for i = 1, #fxNames do
-      if tonumber(tracks[i]) == -1 then
+    for i = 1, #values[7] do
+      if tonumber(values[1]) == -1 then
         trackText = "Master"
       else 
-        trackText = tracks[i] + 1
+        trackText = values[1][i] + 1
       end
+
       mappedCCsText = mappedCCsText.."CC "..
-        ccs[i].." is mapped to track "..trackText..":\n"..fxNames[i].."\n\n"
+        values[2][i].." is mapped to track "..trackText..":\n"..values[7][i].."\n\n"
     end
 
   else
@@ -167,7 +140,7 @@ function learnCC()
   learningStateText = "Learning CC"
   inputEvent = getInputEvent()
   if inputEvent[1] then
-    table.insert(ccs, inputEvent[2])
+    table.insert(values[2], inputEvent[2])
     if learningState then
       gotCC = true
       gotParam = false
@@ -206,19 +179,18 @@ function learnParam()
       currentTouchedFx[5],
       currentTouchedFx[6]
     )}
-    table.insert(tracks, currentTouchedFx[2])
-    table.insert(fxs, currentTouchedFx[5])
-    table.insert(params, currentTouchedFx[6])
-    table.insert(minValues, currentParam[2])
-    table.insert(maxValues, currentParam[3])
-    table.insert(fxNames, fxName[2]..": "..paramName[2])
-    reaper.SetExtState(scriptName, "tracks", table.concat(tracks, ","), false)
-    reaper.SetExtState(scriptName, "ccs", table.concat(ccs, ","), false)
-    reaper.SetExtState(scriptName, "fxs", table.concat(fxs, ","), false)
-    reaper.SetExtState(scriptName, "params", table.concat(params, ","), false)
-    reaper.SetExtState(scriptName, "minValues", table.concat(minValues, ","), false)
-    reaper.SetExtState(scriptName, "maxValues", table.concat(maxValues, ","), false)
-    reaper.SetExtState(scriptName, "fxNames", table.concat(fxNames, ","), false)
+    
+    table.insert(values[1], currentTouchedFx[2])
+    table.insert(values[3], currentTouchedFx[5])
+    table.insert(values[4], currentTouchedFx[6])
+    table.insert(values[5], currentParam[2])
+    table.insert(values[6], currentParam[3])
+    table.insert(values[7], fxName[2]..": "..paramName[2])
+    
+    for i = 1, #values do
+      reaper.SetExtState(scriptName, "values"..i, table.concat(values[i], ","), true)
+    end
+    
     if learningState then
       gotParam = true
       gotCC = false
@@ -229,28 +201,28 @@ end
 
 function setLed(i, trackOut) 
   paramInfo = {reaper.TrackFX_GetParam(
-    trackOut, fxs[i], params[i]
+    trackOut, values[3][i], values[4][i]
   )}
   if paramInfo[1] == 0 then
     value = 0
   else 
     value = 127
   end
-  --reaper.StuffMIDIMessage(
-    --midiOutputId + 16, 176 + midiChannel - 1, ccs[i], value
-  --)
+  reaper.StuffMIDIMessage(
+    midiOutputId + 16, 176 + midiChannel - 1, values[2][i], value
+  )
 end
 
 function setParam(inputEventOut, i, trackOut)
-  if inputEventOut[2] == tonumber(ccs[i]) then
+  if inputEventOut[2] == tonumber(values[2][i]) then
     if inputEventOut[3] == 0 then
-      value = minValues[i]
+      value = values[5][i]
     else
-      value = maxValues[i]
+      value = values[6][i]
     end
     reaper.TrackFX_SetParam(
       trackOut,
-      fxs[i], params[i],  value
+      values[3][i], values[4][i],  value
     )
   end
 end
@@ -328,26 +300,7 @@ gfx.line(0, 55, 400, 55)
   gfx.mouse_y > resetBtnBounds[2] and
   gfx.mouse_x < resetBtnBounds[3] + resetBtnBounds[1] and
   gfx.mouse_y < resetBtnBounds[4] + resetBtnBounds[2] then
-    learningState = false
-    tracks = {}
-    ccs = {}
-    fxs = {}
-    params = {}
-    minValues = {}
-    maxValues = {}
-    fxNames = {}
-    reaper.SetExtState(scriptName, "tracks", table.concat(tracks, ","), false)
-    reaper.SetExtState(scriptName, "ccs", table.concat(ccs, ","), false)
-    reaper.SetExtState(scriptName, "fxs", table.concat(fxs, ","), false)
-    reaper.SetExtState(scriptName, "params", table.concat(params, ","), true)
-    reaper.SetExtState(scriptName, "minValues", table.concat(minValues, ","), true)
-    reaper.SetExtState(scriptName, "maxValues", table.concat(maxValues, ","), true)
-    reaper.SetExtState(scriptName, "fxNames", table.concat(fxNames, ","), true)
-    midiOutputId = ""
-    midiChannel = ""
-    reaper.DeleteExtState(scriptName, "midiOutputId", true)
-    reaper.DeleteExtState(scriptName, "midiChannel", true)
-    reaper.ClearConsole()
+   reset()   
   end
   if mouseState and
   not lastMouseState and
@@ -356,35 +309,34 @@ gfx.line(0, 55, 400, 55)
   gfx.mouse_x < setupBtnBounds[3] + setupBtnBounds[1] and
   gfx.mouse_y < setupBtnBounds[4] + setupBtnBounds[2] then
   
-  setupInput = {reaper.GetUserInputs(
-    "Setup", 2, "MIDI Output Device ID,MIDI Device Channel", 
-    reaper.GetExtState(scriptName,"midiOutputId")..","..
-      reaper.GetExtState(scriptName, "midiChannel")
-  )}
-  if setupInput[1] then
-    local inputValues = {}
-    for value in string.gmatch(setupInput[2]..",", '([^,]*),') do
-      table.insert(inputValues, value)
-    end
-    for i = 1, 2 do
-      if i == 1 then 
-        if inputValues[i] == "" or tonumber(inputValues[i]) == nil then
-          midiOutputId = ""
-        else
-          midiOutputId = tonumber(inputValues[i])
-        end
-      else 
-        if inputValues[i] == "" or tonumber(inputValues[i]) == nil then
-          midiChannel = ""
+    setupInput = {reaper.GetUserInputs(
+      "Setup", 2, "MIDI Output Device ID,MIDI Device Channel", 
+      reaper.GetExtState(scriptName, "midiOutputId")..","..
+        reaper.GetExtState(scriptName, "midiChannel")
+    )}
+    if setupInput[1] then
+      local inputValues = {}
+      for value in string.gmatch(setupInput[2]..",", '([^,]*),') do
+        table.insert(inputValues, value)
+      end
+      for i = 1, 2 do
+        if i == 1 then 
+          if inputValues[i] == "" or tonumber(inputValues[i]) == nil then
+            midiOutputId = ""
+          else
+            midiOutputId = tonumber(inputValues[i])
+          end
         else 
-          midiChannel = tonumber(inputValues[i])
+          if inputValues[i] == "" or tonumber(inputValues[i]) == nil then
+            midiChannel = ""
+          else 
+            midiChannel = tonumber(inputValues[i])
+          end
         end
       end
+      reaper.SetExtState(scriptName, "midiOutputId", midiOutputId, true)
+      reaper.SetExtState(scriptName, "midiChannel", midiChannel, true)
     end
-    
-    reaper.SetExtState(scriptName, "midiOutputId", midiOutputId, true)
-    reaper.SetExtState(scriptName, "midiChannel", midiChannel, true)
-  end
   
   end
   lastMouseState = mouseState
@@ -396,6 +348,27 @@ gfx.line(0, 55, 400, 55)
   gfx.y = 60
   gfx.drawstr(mappedCCsText)
   
+end
+
+function reset()
+  learningState = false
+  values = {
+    [1] = {}, -- tracks
+    [2] = {}, -- ccs
+    [3] = {}, -- fxs
+    [4] = {}, -- params
+    [5] = {}, -- minValues
+    [6] = {}, -- maxValues
+    [7] = {} -- fxNames
+  }
+  for i = 1, #values do
+    reaper.DeleteExtState(scriptName, "values"..i, true)
+  end
+  midiOutputId = ""
+  midiChannel = ""
+  reaper.DeleteExtState(scriptName, "midiOutputId", true)
+  reaper.DeleteExtState(scriptName, "midiChannel", true)
+  reaper.ClearConsole()
 end
 
 function onExit()
