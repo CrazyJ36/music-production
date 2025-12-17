@@ -1,7 +1,8 @@
-reaper.ClearConsole()
+--[[ Load, read reaper FXChains path, click to load and FX Chain. For Windows by CrazyJ36 ]]
 
-fx_chains_dir = "C:\\Users\\crazy\\AppData\\Roaming\\REAPER\\FXChains\\" -- change this if you're on Linux or Mac.
+fx_chains_dir = os.getenv("APPDATA") .. "\\REAPER\\FXChains\\" -- change this if you're on Linux or Mac.
 fx_chains = {}
+gfx.y = 10
 
 line_index = 0
 function getFxChains() 
@@ -10,7 +11,7 @@ function getFxChains()
     line_index = line_index + 1
     gfx.y = gfx.y + 20
     fx_chains[line_index] = {
-      file = line, top = gfx.y, bottom = gfx.y
+      file = line, top = gfx.y - 19, bottom = gfx.y
     }
   end
   dir:close()
@@ -20,6 +21,7 @@ getFxChains()
 
 gfx.init("Load FX Chain", 600, 300)
 function main()
+  mouseState = gfx.mouse_cap & 1 == 1
   if gfx.getchar() == -1 then -- kill script on window close.
     return
   end
@@ -29,28 +31,27 @@ function main()
       gfx.x = 0
       gfx.y = fx_chains[i].top
       gfx.drawstr(fx_chains[i].file)
-      gfx.line(0, gfx.y, 300, gfx.y)
-      mouseState = gfx.mouse_cap & 1 == 1
       if mouseState and
         not lastMouseState and
         gfx.mouse_y > fx_chains[i].top and
         gfx.mouse_y < fx_chains[i].bottom then
-        reaper.ShowConsoleMsg("Clicked\n")
+        os.execute('start "" ' .. '"' .. fx_chains_dir .. fx_chains[i].file .. '"') -- change this if you're on Linux or Mac
+        return
       end
-      lastMouseState = mouseState 
     end
+    lastMouseState = mouseState
   else 
     gfx.x = 0
     gfx.y = 0
     gfx.drawstr("No FX Chains.")
   end
+  
   reaper.defer(main)
 end
 main()
 
 function atExit()
   gfx.quit()
-  reaper.ShowConsoleMsg("\nKilled script successfully.\n")
   return
 end
 reaper.atexit(atExit)
