@@ -25,32 +25,42 @@ end
 getFxChains()
 
 function startFxLoad(selected_fx)
-  local fx_block_start = "<FXCHAIN\n"
-  local fx_block_end = ">\n"
-  local pattern = fx_block_start .. "(.+)" .. fx_block_end
 
   local track = reaper.GetSelectedTrack2(0, 0, true)
   if track == nil then
-    reaper.ShowConsoleMsg("No Track, making one.\n")
     reaper.InsertTrackInProject(0, reaper.GetNumTracks(), 0)
     track = reaper.GetTrack(0, reaper.GetNumTracks() - 1)
     reaper.SetMediaTrackInfo_Value(track, "B_AUTO_RECARM", 1)
     reaper.SetOnlyTrackSelected(track)
-  else
-    reaper.ShowConsoleMsg("Already has  Track.\n")
   end
   
+  
+  local retval, chunk = reaper.GetTrackStateChunk(track, '', false)
+  
+  local pattern = "(.*)"
+  local fx_chain_block_start = "<FXCHAIN\n"
+  local fx_chain_block_end = ">\n"
+
   local file = fx_chains_dir .. fx_chains[selected_fx].file
   local file_loader = io.open(file, 'r')
   local file_text = file_loader:read('*a')
   file_loader:close()
   
-  local retval, chunk = reaper.GetTrackStateChunk(track, '', false)
-  local new_chunk = chunk:gsub(pattern, fx_block_start .. file_text .. fx_block_end)
-  reaper.SetTrackStateChunk(track, new_chunk, true)
+  new_chunk =  chunk:gsub(
+    pattern, 
+    fx_chain_block_start .. file_text .. fx_chain_block_end
+  )
+  reaper.SetTrackStateChunk(track, fx_chain_block_start .. new_chunk .. fx_chain_block_end, true)
   
-  --eaper.ShowConsoleMsg(new_chunk)
+  if not chunk:find(pattern) then
+    reaper.ShowConsoleMsg("No FX Chain block found\n")
+    
+  else
+    reaper.ShowConsoleMsg("Has FX Chain block\n")
+    
+  end
   
+  local vst_block_pattern = "<VST " .. "(.*)" .. ">\n"
 end
 
 window_width = 500
