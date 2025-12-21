@@ -25,42 +25,57 @@ end
 getFxChains()
 
 function startFxLoad(selected_fx)
-
+  
   local track = reaper.GetSelectedTrack2(0, 0, true)
-  if track == nil then
-    reaper.InsertTrackInProject(0, reaper.GetNumTracks(), 0)
+  if track == nil then -- add track at end
+    reaper.Main_OnCommand(40702, 0)
     track = reaper.GetTrack(0, reaper.GetNumTracks() - 1)
-    reaper.SetMediaTrackInfo_Value(track, "B_AUTO_RECARM", 1)
-    reaper.SetOnlyTrackSelected(track)
   end
-  
-  
-  local retval, chunk = reaper.GetTrackStateChunk(track, '', false)
-  
-  local pattern = "(.*)"
-  local fx_chain_block_start = "<FXCHAIN\n"
-  local fx_chain_block_end = ">\n"
 
   local file = fx_chains_dir .. fx_chains[selected_fx].file
   local file_loader = io.open(file, 'r')
   local file_text = file_loader:read('*a')
   file_loader:close()
+
+  local fx_chain_block_start = "<FXCHAIN\n"
+  local blocks_end = ">\n"
+  local _, old_chunk = reaper.GetTrackStateChunk(track, "", true)
+  reaper.ShowConsoleMsg("old_chunk:\n" .. old_chunk .. "\n\n")
+  local new_chunk = nil
   
-  new_chunk =  chunk:gsub(
-    pattern, 
-    fx_chain_block_start .. file_text .. fx_chain_block_end
-  )
-  reaper.SetTrackStateChunk(track, fx_chain_block_start .. new_chunk .. fx_chain_block_end, true)
-  
-  if not chunk:find(pattern) then
-    reaper.ShowConsoleMsg("No FX Chain block found\n")
+  local _, last_vst_index = old_chunk:find("BYPASS (.*)\n>\n>") 
+  if last_vst_index ~= nil then
+    reaper.ShowConsoleMsg("ALREADY HAS FX ON TRACK.\n\n")
+    new_chunk = 
+      old_chunk:sub(1, last_vst_index - 3) ..
+      file_text .. 
+      old_chunk:sub(last_vst_index - 2)
     
   else
-    reaper.ShowConsoleMsg("Has FX Chain block\n")
-    
+    -- IF CHUNK HAS NO <FXCHAIN BLOCK, ADD IT.
+    if old_chunk:find("<FXCHAIN") ~= nill then
+      reaper.ShowConsoleMsg("HAS <FXCHAIN BLOCK BUT NO FX, FX PREVIOUSLY REMOVED FROM TRACK.\n\n")
+      local remove_last_char = old_chunk:sub(1, - 5)
+      new_chunk = 
+        remove_last_char .. 
+        file_text .. 
+        blocks_end ..
+        blocks_end
+    else
+      reaper.ShowConsoleMsg("TRACK NEWLY INSERTED OR NEVER HAD FX.\n\n")
+      local remove_last_char = old_chunk:sub(1, -3)
+      new_chunk =
+        remove_last_char ..
+        fx_chain_block_start ..
+        file_text ..
+        blocks_end ..
+        blocks_end
+    end
   end
   
-  local vst_block_pattern = "<VST " .. "(.*)" .. ">\n"
+  reaper.ShowConsoleMsg("new_chunk: \n" .. new_chunk .. "\n\n")
+  reaper.SetTrackStateChunk(track, new_chunk, true)
+ 
 end
 
 window_width = 500
@@ -100,8 +115,18 @@ function mainLoop()
     gfx.x = 5
     gfx.y = 0
     gfx.drawstr("Refresh", refresh_button[3], refresh_button[2])
-    gfx.line(0, fx_chains[selected_fx].bottom, gfx.measurestr(fx_chains[selected_fx].friendly_name), fx_chains[selected_fx].bottom) -- bottom
-    gfx.line(0, fx_chains[selected_fx].top,  0, fx_chains[selected_fx].bottom) -- side
+    gfx.line(
+      0, 
+      fx_chains[selected_fx].bottom,
+      gfx.measurestr(fx_chains[selected_fx].friendly_name),
+      fx_chains[selected_fx].bottom
+    ) -- bottom
+    gfx.line(
+      0,
+      fx_chains[selected_fx].top,
+      0,
+      fx_chains[selected_fx].bottom
+    ) -- side
 
     if char == 1685026670 and fx_chains[selected_fx + 1] ~= nil then -- down
       selected_fx = selected_fx + 1
