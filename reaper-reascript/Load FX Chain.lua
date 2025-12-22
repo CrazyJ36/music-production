@@ -1,11 +1,10 @@
---[[ Load, read reaper FXChains path, click to load and FX Chain. For Windows by CrazyJ36 ]]
-reaper.ClearConsole()
-help_text = "Help: Click or press Keyboard Up/Down, Enter."
+--[[ Lload and FX Chain for Windows by CrazyJ36 ]]
+help_text = "Click or press Keyboard Up/Down, Enter."
 
-fx_chains = {}
 fx_chains_dir = os.getenv("APPDATA") .. "\\REAPER\\FXChains\\" -- change this if you're on Linux or Mac.
 
 function getFxChains()
+  fx_chains = {}
   local dir_line_index = 0
   local next_item_top = 4
   local item_height = 18
@@ -25,57 +24,31 @@ end
 getFxChains()
 
 function startFxLoad(selected_fx)
-  
   local track = reaper.GetSelectedTrack2(0, 0, true)
   if track == nil then -- add track at end
     reaper.Main_OnCommand(40702, 0)
     track = reaper.GetTrack(0, reaper.GetNumTracks() - 1)
   end
-
+  
+  local old_chunk = select(2, reaper.GetTrackStateChunk(track, "", false))
+    
+  local fx_chain_block_start = "<FXCHAIN\n"
+  local blocks_end = ">\n"
+  
   local file = fx_chains_dir .. fx_chains[selected_fx].file
   local file_loader = io.open(file, 'r')
   local file_text = file_loader:read('*a')
   file_loader:close()
-
-  local fx_chain_block_start = "<FXCHAIN\n"
-  local blocks_end = ">\n"
-  local _, old_chunk = reaper.GetTrackStateChunk(track, "", true)
-  reaper.ShowConsoleMsg("old_chunk:\n" .. old_chunk .. "\n\n")
+  
   local new_chunk = nil
-  
-  local _, last_vst_index = old_chunk:find("BYPASS (.*)\n>\n>") 
-  if last_vst_index ~= nil then
-    reaper.ShowConsoleMsg("ALREADY HAS FX ON TRACK.\n\n")
-    new_chunk = 
-      old_chunk:sub(1, last_vst_index - 3) ..
-      file_text .. 
-      old_chunk:sub(last_vst_index - 2)
-    
+  if old_chunk:find(fx_chain_block_start) ~= nill then
+    new_chunk = old_chunk:gsub(blocks_end .. blocks_end, "") .. 
+      file_text .. blocks_end .. blocks_end
   else
-    -- IF CHUNK HAS NO <FXCHAIN BLOCK, ADD IT.
-    if old_chunk:find("<FXCHAIN") ~= nill then
-      reaper.ShowConsoleMsg("HAS <FXCHAIN BLOCK BUT NO FX, FX PREVIOUSLY REMOVED FROM TRACK.\n\n")
-      local remove_last_char = old_chunk:sub(1, - 5)
-      new_chunk = 
-        remove_last_char .. 
-        file_text .. 
-        blocks_end ..
-        blocks_end
-    else
-      reaper.ShowConsoleMsg("TRACK NEWLY INSERTED OR NEVER HAD FX.\n\n")
-      local remove_last_char = old_chunk:sub(1, -3)
-      new_chunk =
-        remove_last_char ..
-        fx_chain_block_start ..
-        file_text ..
-        blocks_end ..
-        blocks_end
-    end
+    new_chunk = old_chunk:sub(1, - 3) .. fx_chain_block_start .. 
+      file_text .. blocks_end .. blocks_end
   end
-  
-  reaper.ShowConsoleMsg("new_chunk: \n" .. new_chunk .. "\n\n")
   reaper.SetTrackStateChunk(track, new_chunk, true)
- 
 end
 
 window_width = 500
