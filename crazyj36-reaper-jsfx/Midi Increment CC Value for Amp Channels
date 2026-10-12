@@ -6,8 +6,8 @@ out_pin:none
 @init
 ext_no_init = 1.0;
 value = 0;
-// increment = 127 / slider incrementer.
-increment = 32;
+cc = 4;
+channels = 4;
 
 @gfx
 gfx_set(1, 1, 1, 1);
@@ -18,11 +18,11 @@ gfx_drawnumber(value, 0);
 
 @block
 while (midirecv(offset, msg1, msg2, msg3)) (
-    msg2 == 4 ? (
+    msg2 == cc ? (
    
-      value = value + increment;
+      value = value + 127 / channels;
      
-      value == 128 ? (
+      value > 128 ? (
         value = 0;
       );
       
