@@ -1,11 +1,11 @@
-desc:Increment CC Values on each press (CrazyJ36)
+desc:Increment CC Values on for Amp Channels (CrazyJ36)
 
 in_pin:none
 out_pin:none
 
 @init
 ext_no_init = 1.0;
-value = 0;
+value = 32;
 cc = 4;
 channels = 4;
 
@@ -21,11 +21,11 @@ while (midirecv(offset, msg1, msg2, msg3)) (
     msg2 == cc ? (
    
       value = value + 127 / channels;
-     
+  
       value > 128 ? (
-        value = 0;
+        value = 32;
       );
-      
+     
       midisend(offset, msg1, msg2, value);
-    )
+    );  
 );
