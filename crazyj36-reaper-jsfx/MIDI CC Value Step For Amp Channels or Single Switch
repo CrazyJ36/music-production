@@ -19,14 +19,14 @@ current_channel = 1;
 @block
 while (midirecv(offset, msg1, msg2, msg3)) (
     msg2 == cc ? (
-  
-      increment = 127 / (channels - 1);
 
-      current_channel > channels - 1 ? (
-        current_channel = 1;
+     increment = 127 / (channels - 1);
+ 
+      current_channel > (channels - 1)? (
         value = 0;
+        current_channel = 1;
       ) : (
-       current_channel += 1;
+        current_channel += 1;
         value = increment * (current_channel - 1); // BUG: skips 32 and goes to 64 on click 2
       );
       
