@@ -20,17 +20,17 @@ current_channel = 1;
 while (midirecv(offset, msg1, msg2, msg3)) (
     msg2 == cc ? (
   
-      increment = 127 / channels;
-      
-      current_channel >= channels ? (
+      increment = 127 / (channels - 1);
+
+      current_channel > channels - 1 ? (
         current_channel = 1;
         value = 0;
       ) : (
-        current_channel += 1;
-        value = increment * current_channel; // BUG: skips 32 and goes to 64 on click 2
+       current_channel += 1;
+        value = increment * (current_channel - 1); // BUG: skips 32 and goes to 64 on click 2
       );
       
-      midisend(offset, msg1, msg2, value);
+      midisend(offset, msg1, msg2, ceil(value));
     ) : (
       midisend(offset, msg1, msg2, msg3);
     );  
