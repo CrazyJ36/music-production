@@ -1,6 +1,6 @@
-/* Add this file C:\Users\[USER]\AppData\Roaming\REAPER\Effects
-   and load as vst before your amp, then select the button CC you're controlling
-   and the number of channel options that your plugin amp/switch has.
+/* Add this file in C:\Users\[USER]\AppData\Roaming\REAPER\Effects
+   and load as plugin before your amp, then in the ui, select the 
+   button CC you're controlling and the number of channel options that your plugin amp/switch has.
 */
 
 desc:MIDI CC Value Step for Amp Channels or Single Switches(CrazyJ36)
@@ -27,9 +27,11 @@ while (midirecv(offset, msg1, msg2, msg3)) (
         value = 0;
       ) : (
         current_channel += 1;
-        value = current_channel * increment;
+        value = increment * current_channel; // BUG: skips 32 and goes to 64 on click 2
       );
       
       midisend(offset, msg1, msg2, value);
+    ) : (
+      midisend(offset, msg1, msg2, msg3);
     );  
 );
