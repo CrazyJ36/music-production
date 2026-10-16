@@ -54,15 +54,25 @@ window_width = 500
 window_height = 200
 gfx.init("Load FX Chain", window_width, window_height)
 gfx.setfont(1, "Arial", 16)
-refresh_button = {0, 0, 53, 18, 15}
+refresh_button = {0, 0, 64, 24, 15}
+scroll_button_cc = {64, 0, 64, 24, 15}
 total_sleep_time = os.clock() + 4
 selected_fx = 1
 cc = -1
 triggered = false
+
+scroll_cc = -1
+
 function mainLoop()
 
   currentInputEvent = {reaper.MIDI_GetRecentInputEvent(0)}
   cc = currentInputEvent[2]:byte(2)
+  
+  if reaper.GetExtState("scroll_cc", "file") == nil then
+    scroll_cc = 0
+  else 
+    scroll_cc = reaper.GetExtState("scroll_cc", "file")
+  end
   
   if reaper.GetExtState("reopen", "file") == "false" then
     reaper.ShowConsoleMsg("not reopening")
@@ -92,6 +102,7 @@ function mainLoop()
     gfx.y = 0
     gfx.x = 0
     gfx.drawstr(help_text, 2, gfx.w, gfx.h)
+    
     gfx.roundrect(
       refresh_button[1],
       refresh_button[2],
@@ -99,10 +110,22 @@ function mainLoop()
       refresh_button[4],
       refresh_button[5]
     )
+    gfx.roundrect(
+      scroll_button_cc[1],
+      scroll_button_cc[2],
+      scroll_button_cc[3],
+      scroll_button_cc[4],
+      scroll_button_cc[5]
+    )
+    gfx.x = refresh_button[1] + 10
+    gfx.y = refresh_button[2] + 4
+    gfx.drawstr("Refresh")
     
-    gfx.x = 5
-    gfx.y = 0
-    gfx.drawstr("Refresh", refresh_button[3], refresh_button[2])
+    
+    gfx.x = scroll_button_cc[1] + 5
+    gfx.y = scroll_button_cc[2] + 4
+    gfx.drawstr("Scroll CC")
+    
     gfx.line(
       0, 
       fx_chains[selected_fx].bottom,
@@ -116,13 +139,50 @@ function mainLoop()
       fx_chains[selected_fx].bottom
     ) -- side
 
-
-    if (char == 1685026670 or 
-    (cc == 114 and
+    for i = 1, #fx_chains, 1 do
+      gfx.x = 1
+      gfx.y = fx_chains[i].top
+      gfx.drawstr(fx_chains[i].friendly_name)
+      
+      if gfx.mouse_cap & 1 == 1 then
+        mx = gfx.mouse_x
+        my = gfx.mouse_y
+        
+        if mx < gfx.measurestr(fx_chains[i].friendly_name) and
+        my > fx_chains[i].top and
+        my < fx_chains[i].bottom then
+          selected_fx = i
+          startFxLoad(i) 
+          return
+        
+        elseif mx < refresh_button[3] and -- refresh under mouse
+        mx > refresh_button[1] and
+        my > refresh_button[2] and
+        my < refresh_button[4] then
+          getFxChains()
+          break
+        
+        -- scroll_button_cc = {64, 0, 64, 24, 15}
+        elseif mx < (scroll_button_cc[1] + scroll_button_cc[3]) and -- scroll_button_cc under mouse
+          mx > scroll_button_cc[1] and
+          my > scroll_button_cc[2] and
+          my < scroll_button_cc[4] then
+            retval, user_input = reaper.GetUserInputs("Desired Scroll CC:", 1, "", reaper.GetExtState("scroll_cc", "file"))
+            scroll_cc = user_input
+            reaper.SetExtState("scroll_cc", "file", user_input, true)
+            break
+        end
+      end
+    end
+    
+    
+    
+    if (char == 1685026670 or -- down
+    (cc == tonumber(scroll_cc)) and
     currentInputEvent[1] ~= 0 and
     currentInputEvent[2]:byte(1) & 0xF0 == 176 and
     triggered == false and
-    currentInputEvent[2]:byte(3) == 127)) and 
+    currentInputEvent[2]:byte(3) == 127) and 
     fx_chains[selected_fx + 1] ~= nil then -- down
       if selected_fx + 1 > reaper.CountTracks(0) then
         reaper.ShowConsoleMsg("looping")
@@ -148,26 +208,6 @@ function mainLoop()
       return
     end
     
-    for i = 1, #fx_chains, 1 do
-      gfx.x = 1
-      gfx.y = fx_chains[i].top
-      gfx.drawstr(fx_chains[i].friendly_name)
-      
-      if gfx.mouse_cap & 1 == 1 and 
-        gfx.mouse_x < gfx.measurestr(fx_chains[i].friendly_name) and
-        gfx.mouse_y > fx_chains[i].top and
-        gfx.mouse_y < fx_chains[i].bottom then
-          selected_fx = i
-          startFxLoad(i) 
-          return
-      elseif gfx.mouse_cap & 1 == 1 and -- refresh
-        gfx.mouse_x < refresh_button[3] and
-        gfx.mouse_y < refresh_button[4] then
-          getFxChains()
-          break
-      end
-    end
-
   end
 
   reaper.defer(mainLoop)
