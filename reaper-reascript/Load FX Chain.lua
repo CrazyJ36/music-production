@@ -58,7 +58,16 @@ gfx.setfont(1, "Arial", 16)
 refresh_button = {0, 0, 53, 18, 15}
 total_sleep_time = os.clock() + 4
 selected_fx = 1
+triggered = false
+cc = -1
 function mainLoop()
+
+  currentInputEvent = {reaper.MIDI_GetRecentInputEvent(0)}
+  cc = currentInputEvent[2]:byte(2)
+  if currentInputEvent[2]:byte(3) == 0 then
+    triggered = false
+  end
+  
   local char = gfx.getchar()
   if char == -1 then
     return
@@ -101,14 +110,34 @@ function mainLoop()
       fx_chains[selected_fx].bottom
     ) -- side
 
-    if char == 1685026670 and fx_chains[selected_fx + 1] ~= nil then -- down
+    if (char == 1685026670 or 
+    (cc == 122 and
+    currentInputEvent[1] ~= 0 and
+    currentInputEvent[2]:byte(1) & 0xF0 == 176 and
+    triggered ~= true and
+    currentInputEvent[2]:byte(3) == 127)) and 
+    fx_chains[selected_fx + 1] ~= nil then -- down
       selected_fx = selected_fx + 1
-    elseif char == 30064 and fx_chains[selected_fx - 1] ~= nil then -- up
+      triggered = true
+    elseif (char == 30064 or 
+    (cc == 116 and
+    currentInputEvent[1] ~= 0 and
+    currentInputEvent[2]:byte(1) & 0xF0 == 176 and
+    triggered ~= true and
+    currentInputEvent[2]:byte(3) == 127)) and
+    fx_chains[selected_fx - 1] ~= nil then -- up
+      triggered = true
       selected_fx = selected_fx - 1
-    elseif char == 13 then
+    elseif char == 13 or
+    (cc == 123 and
+    currentInputEvent[1] ~= 0 and
+    currentInputEvent[2]:byte(1) & 0xF0 == 176 and
+    triggered ~= true and
+    currentInputEvent[2]:byte(3) == 127) then
       startFxLoad(selected_fx)
       return
     end
+    
     for i = 1, #fx_chains, 1 do
       gfx.x = 1
       gfx.y = fx_chains[i].top
