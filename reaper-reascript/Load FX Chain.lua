@@ -1,6 +1,5 @@
---[[ Lload and FX Chain for Windows by CrazyJ36 ]]
+--[[ Load and FX Chain for Windows by CrazyJ36 ]]
 help_text = "Click or press Keyboard Up/Down, Enter."
-
 fx_chains_dir = os.getenv("APPDATA") .. "\\REAPER\\FXChains\\" -- change this if you're on Linux or Mac.
 
 function getFxChains()
@@ -25,10 +24,10 @@ getFxChains()
 
 function startFxLoad(selected_fx)
   local track = reaper.GetSelectedTrack2(0, 0, true)
-  if track == nil then -- add track at end
+  --if track == nil then -- add track at end
     reaper.Main_OnCommand(40702, 0)
-    track = reaper.GetTrack(0, reaper.GetNumTracks() - 1)
-  end
+    local track = reaper.GetTrack(0, reaper.GetNumTracks() - 1)
+  --end
   
   local old_chunk = select(2, reaper.GetTrackStateChunk(track, "", false))
     
@@ -58,12 +57,19 @@ gfx.setfont(1, "Arial", 16)
 refresh_button = {0, 0, 53, 18, 15}
 total_sleep_time = os.clock() + 4
 selected_fx = 1
-triggered = false
 cc = -1
+triggered = false
 function mainLoop()
 
   currentInputEvent = {reaper.MIDI_GetRecentInputEvent(0)}
   cc = currentInputEvent[2]:byte(2)
+  
+  if reaper.GetExtState("reopen", "file") == "false" then
+    reaper.ShowConsoleMsg("not reopening")
+    reaper.SetExtState("reopen", "file", "true", true)
+    return
+  end
+
   if currentInputEvent[2]:byte(3) == 0 then
     triggered = false
   end
@@ -110,31 +116,35 @@ function mainLoop()
       fx_chains[selected_fx].bottom
     ) -- side
 
+
     if (char == 1685026670 or 
-    (cc == 122 and
+    (cc == 114 and
     currentInputEvent[1] ~= 0 and
     currentInputEvent[2]:byte(1) & 0xF0 == 176 and
-    triggered ~= true and
+    triggered == false and
     currentInputEvent[2]:byte(3) == 127)) and 
     fx_chains[selected_fx + 1] ~= nil then -- down
-      selected_fx = selected_fx + 1
+      if selected_fx + 1 > reaper.CountTracks(0) then
+        reaper.ShowConsoleMsg("looping")
+        selected_fx = 1
+      else 
+        selected_fx = selected_fx + 1
+      end
       triggered = true
-    elseif (char == 30064 or 
-    (cc == 116 and
-    currentInputEvent[1] ~= 0 and
-    currentInputEvent[2]:byte(1) & 0xF0 == 176 and
-    triggered ~= true and
-    currentInputEvent[2]:byte(3) == 127)) and
-    fx_chains[selected_fx - 1] ~= nil then -- up
-      triggered = true
+      
+    elseif char == 30064 and -- up
+    fx_chains[selected_fx - 1] ~= nil then 
       selected_fx = selected_fx - 1
-    elseif char == 13 or
-    (cc == 123 and
+      
+    elseif char == 13 or -- enter/select
+    (cc == 115 and
     currentInputEvent[1] ~= 0 and
     currentInputEvent[2]:byte(1) & 0xF0 == 176 and
-    triggered ~= true and
+    triggered == false and
     currentInputEvent[2]:byte(3) == 127) then
+      triggered = true
       startFxLoad(selected_fx)
+      reaper.SetExtState("reopen", "file", "false", true)
       return
     end
     
@@ -147,9 +157,10 @@ function mainLoop()
         gfx.mouse_x < gfx.measurestr(fx_chains[i].friendly_name) and
         gfx.mouse_y > fx_chains[i].top and
         gfx.mouse_y < fx_chains[i].bottom then
+          selected_fx = i
           startFxLoad(i) 
           return
-      elseif gfx.mouse_cap & 1 == 1 and 
+      elseif gfx.mouse_cap & 1 == 1 and -- refresh
         gfx.mouse_x < refresh_button[3] and
         gfx.mouse_y < refresh_button[4] then
           getFxChains()
@@ -158,11 +169,13 @@ function mainLoop()
     end
 
   end
-  
-  reaper.defer(mainLoop)
-end
-mainLoop()
 
+  reaper.defer(mainLoop)
+  
+end
+
+ mainLoop()
+ 
 function atExit()
   gfx.quit()
 end
