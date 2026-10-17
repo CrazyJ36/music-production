@@ -1,5 +1,5 @@
 --[[ Load and FX Chain for Windows by CrazyJ36 ]]
-help_text = "Click or press Keyboard Up/Down, Enter."
+help_text = "Use mouse, MIDI button, or key up/down to select.\nUse click, another MIDI button or enter key to open ."
 fx_chains_dir = os.getenv("APPDATA") .. "\\REAPER\\FXChains\\" -- change this if you're on Linux or Mac.
 
 function getFxChains()
@@ -52,26 +52,35 @@ end
 
 window_width = 500
 window_height = 200
+button_height = 24
+button_width = 64
 gfx.init("Load FX Chain", window_width, window_height)
 gfx.setfont(1, "Arial", 16)
-refresh_button = {0, 0, 64, 24, 15}
-scroll_button_cc = {64, 0, 64, 24, 15}
+fxListStartY = 52
+refresh_button_graph = {0, 42, button_width, button_height, 15}
+scroll_button_cc_graph = {68, 42, button_width, button_height, 15}
+select_button_cc_graph = {136, 42, button_width, button_height, 15}
 total_sleep_time = os.clock() + 4
 selected_fx = 1
-cc = -1
 triggered = false
-
-scroll_cc = -1
+scroll_button_cc = -1
+select_button_cc = -1
+scroll_y = 0
+scroll_offset = 0
 
 function mainLoop()
 
   currentInputEvent = {reaper.MIDI_GetRecentInputEvent(0)}
-  cc = currentInputEvent[2]:byte(2)
   
-  if reaper.GetExtState("scroll_cc", "file") == nil then
-    scroll_cc = 0
+  if reaper.GetExtState("scroll_button_cc", "file") == nil then
+    scroll_button_cc = 0
   else 
-    scroll_cc = reaper.GetExtState("scroll_cc", "file")
+    scroll_button_cc = reaper.GetExtState("scroll_button_cc", "file")
+  end
+  if reaper.GetExtState("select_button_cc", "file") == nil then
+    select_button_cc = 0
+  else 
+    select_button_cc = reaper.GetExtState("select_button_cc", "file")
   end
   
   if reaper.GetExtState("reopen", "file") == "false" then
@@ -99,115 +108,156 @@ function mainLoop()
     gfx.y = 0
     gfx.drawstr("No FX Chains... " .. seconds, 1 | 4, gfx.w, gfx.h)
   else
-    gfx.y = 0
+    gfx.y = scroll_y
     gfx.x = 0
-    gfx.drawstr(help_text, 2, gfx.w, gfx.h)
-    
+    gfx.drawstr(help_text)
+    gfx.line(0, 36 + scroll_y, gfx.w, 36 + scroll_y)
+   
     gfx.roundrect(
-      refresh_button[1],
-      refresh_button[2],
-      refresh_button[3],
-      refresh_button[4],
-      refresh_button[5]
+      refresh_button_graph[1],
+      refresh_button_graph[2] + scroll_y,
+      refresh_button_graph[3],
+      refresh_button_graph[4],
+      refresh_button_graph[5]
     )
     gfx.roundrect(
-      scroll_button_cc[1],
-      scroll_button_cc[2],
-      scroll_button_cc[3],
-      scroll_button_cc[4],
-      scroll_button_cc[5]
+      scroll_button_cc_graph[1],
+      scroll_button_cc_graph[2] + scroll_y,
+      scroll_button_cc_graph[3],
+      scroll_button_cc_graph[4],
+      scroll_button_cc_graph[5]
     )
-    gfx.x = refresh_button[1] + 10
-    gfx.y = refresh_button[2] + 4
+    gfx.roundrect(
+      select_button_cc_graph[1],
+      select_button_cc_graph[2] + scroll_y,
+      select_button_cc_graph[3],
+      select_button_cc_graph[4],
+      select_button_cc_graph[5]
+    )
+    gfx.x = refresh_button_graph[1] + 10
+    gfx.y = refresh_button_graph[2] + 4 + scroll_y
     gfx.drawstr("Refresh")
-    
-    
-    gfx.x = scroll_button_cc[1] + 5
-    gfx.y = scroll_button_cc[2] + 4
+    gfx.x = scroll_button_cc_graph[1] + 5
+    gfx.y = scroll_button_cc_graph[2] + 4 + scroll_y
     gfx.drawstr("Scroll CC")
+    gfx.x = select_button_cc_graph[1] + 5
+    gfx.y = select_button_cc_graph[2] + 4 + scroll_y
+    gfx.drawstr("Select CC")
     
     gfx.line(
       0, 
-      fx_chains[selected_fx].bottom,
+      fx_chains[selected_fx].bottom + fxListStartY + scroll_y,
       gfx.measurestr(fx_chains[selected_fx].friendly_name),
-      fx_chains[selected_fx].bottom
+      fx_chains[selected_fx].bottom + fxListStartY + scroll_y
     ) -- bottom
     gfx.line(
       0,
-      fx_chains[selected_fx].top,
+      fx_chains[selected_fx].top + fxListStartY + scroll_y,
       0,
-      fx_chains[selected_fx].bottom
+      fx_chains[selected_fx].bottom + fxListStartY + scroll_y
     ) -- side
 
     for i = 1, #fx_chains, 1 do
       gfx.x = 1
-      gfx.y = fx_chains[i].top
+      gfx.y = fx_chains[i].top + fxListStartY + scroll_y
       gfx.drawstr(fx_chains[i].friendly_name)
       
+      -- left mouse button clicked.
       if gfx.mouse_cap & 1 == 1 then
         mx = gfx.mouse_x
         my = gfx.mouse_y
         
+        -- load fx
         if mx < gfx.measurestr(fx_chains[i].friendly_name) and
-        my > fx_chains[i].top and
-        my < fx_chains[i].bottom then
+        my > fx_chains[i].top + fxListStartY + scroll_y and
+        my < fx_chains[i].bottom + fxListStartY + scroll_y then
           selected_fx = i
-          startFxLoad(i) 
+          startFxLoad(selected_fx) 
           return
         
-        elseif mx < refresh_button[3] and -- refresh under mouse
-        mx > refresh_button[1] and
-        my > refresh_button[2] and
-        my < refresh_button[4] then
+        -- refresh clicked
+        elseif mx < refresh_button_graph[3] and
+        mx > refresh_button_graph[1] and
+        my > refresh_button_graph[2] and
+        my < refresh_button_graph[4] then
           getFxChains()
+          reaper.ShowConsoleMsg("clicked refresh")
           break
         
-        -- scroll_button_cc = {64, 0, 64, 24, 15}
-        elseif mx < (scroll_button_cc[1] + scroll_button_cc[3]) and -- scroll_button_cc under mouse
-          mx > scroll_button_cc[1] and
-          my > scroll_button_cc[2] and
-          my < scroll_button_cc[4] then
-            retval, user_input = reaper.GetUserInputs("Desired Scroll CC:", 1, "", reaper.GetExtState("scroll_cc", "file"))
-            scroll_cc = user_input
-            reaper.SetExtState("scroll_cc", "file", user_input, true)
-            break
+        -- scroll_button_cc clicked
+        elseif mx < (scroll_button_cc_graph[1] + scroll_button_cc_graph[3]) and 
+        mx > scroll_button_cc_graph[1] + scroll_y  and
+        my > scroll_button_cc_graph[2] + scroll_y and
+        my < scroll_button_cc_graph[4] + scroll_y then
+          retval, scroll_cc_input = reaper.GetUserInputs("Desired Scroll CC:", 1, "", reaper.GetExtState("scroll_button_cc", "file"))
+          scroll_button_cc = scroll_cc_input
+          if retval == true then
+            reaper.SetExtState("scroll_button_cc", "file", scroll_cc_input, true)
+          end
+          break
+        elseif mx < (select_button_cc_graph[1] + select_button_cc_graph[3]) and -- select button
+        mx > select_button_cc_graph[1] + scroll_y  and
+        my > select_button_cc_graph[2] + scroll_y and
+        my < select_button_cc_graph[4] + scroll_y  then
+          reaper.ShowConsoleMsg("done")
         end
       end
     end
     
-    
-    
-    if (char == 1685026670 or -- down
-    (cc == tonumber(scroll_cc)) and
+    -- down key
+    down = char == 1685026670 or
+    (currentInputEvent[2]:byte(2) == tonumber(scroll_button_cc) and
     currentInputEvent[1] ~= 0 and
     currentInputEvent[2]:byte(1) & 0xF0 == 176 and
     triggered == false and
-    currentInputEvent[2]:byte(3) == 127) and 
-    fx_chains[selected_fx + 1] ~= nil then -- down
-      if selected_fx + 1 > reaper.CountTracks(0) then
-        reaper.ShowConsoleMsg("looping")
-        selected_fx = 1
-      else 
-        selected_fx = selected_fx + 1
-      end
+    currentInputEvent[2]:byte(3) == 127)
+
+    --reaper.ShowConsoleMsg("down: "..tostring(down).."\n")
+    
+    if down and fx_chains[selected_fx + 1] ~= nil then
+      selected_fx = selected_fx + 1
       triggered = true
       
-    elseif char == 30064 and -- up
+    -- loop selection down key.
+    elseif down and fx_chains[selected_fx + 1] == nil then
+      selected_fx = 1
+      triggered = true
+   
+    -- up key
+    elseif char == 30064 and
     fx_chains[selected_fx - 1] ~= nil then 
       selected_fx = selected_fx - 1
       
-    elseif char == 13 or -- enter/select
-    (cc == 115 and
+    -- enter/select
+    elseif char == 13 or 
+    (currentInputEvent[2]:byte(2) == 115 and
     currentInputEvent[1] ~= 0 and
     currentInputEvent[2]:byte(1) & 0xF0 == 176 and
     triggered == false and
     currentInputEvent[2]:byte(3) == 127) then
       triggered = true
-      startFxLoad(selected_fx)
+      startFxLoad(sel-ected_fx)
       reaper.SetExtState("reopen", "file", "false", true)
       return
     end
     
+    
+    w, h = gfx.measurestr(help_text)
+    
+    if gfx.mouse_wheel ~= 0 then 
+      scroll_y = scroll_y + (gfx.mouse_wheel / 120) * 20
+      max_scroll = math.max(0, fx_chains[#fx_chains].bottom - 150)
+      reaper.ShowConsoleMsg("mouse_wheel: "..gfx.mouse_wheel..", Y: "..gfx.y..", scrollY: "..scroll_y..", Bottom: "..max_scroll.."\n")
+      
+      if scroll_y > 0  then
+         scroll_y = 0 
+      elseif scroll_y < -max_scroll then
+        scroll_y = -max_scroll
+      end
+      
+      gfx.mouse_wheel = 0
+    end
+      
   end
 
   reaper.defer(mainLoop)
