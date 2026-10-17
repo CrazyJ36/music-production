@@ -68,7 +68,7 @@ select_button_cc = -1
 scroll_y = 0
 scroll_offset = 0
 max_scroll = -1
-scroll_pos = 0
+scrollbar_position = 0
 
 function mainLoop()
 
@@ -113,7 +113,6 @@ function mainLoop()
     gfx.y = scroll_y
     gfx.x = 0
     gfx.drawstr(help_text)
-    gfx.line(0, 36 + scroll_y, gfx.w, 36 + scroll_y)
    
     gfx.roundrect(
       refresh_button_graph[1],
@@ -142,7 +141,7 @@ function mainLoop()
     gfx.x = scroll_button_cc_graph[1] + 5
     gfx.y = scroll_button_cc_graph[2] + 4 + scroll_y
     gfx.drawstr("Scroll CC")
-    gfx.x = select_button_cc_graph[1] + 5
+    gfx.x = select_button_cc_graph[1] + 3
     gfx.y = select_button_cc_graph[2] + 4 + scroll_y
     gfx.drawstr("Select CC")
     
@@ -180,28 +179,35 @@ function mainLoop()
         -- refresh clicked
         elseif mx < refresh_button_graph[3] and
         mx > refresh_button_graph[1] and
-        my > refresh_button_graph[2] and
-        my < refresh_button_graph[4] then
+        my > refresh_button_graph[2] + scroll_y and
+        my < refresh_button_graph[4] + refresh_button_graph[2] then
           getFxChains()
           reaper.ShowConsoleMsg("clicked refresh")
           break
         
         -- scroll_button_cc clicked
-        elseif mx < (scroll_button_cc_graph[1] + scroll_button_cc_graph[3]) and 
-        mx > scroll_button_cc_graph[1] + scroll_y  and
+        elseif mx < (scroll_button_cc_graph[3] + scroll_button_cc_graph[1]) and 
+        mx > scroll_button_cc_graph[1]  and 
         my > scroll_button_cc_graph[2] + scroll_y and
-        my < scroll_button_cc_graph[4] + scroll_y then
+        my < scroll_button_cc_graph[4] + scroll_button_cc_graph[2] then
           retval, scroll_cc_input = reaper.GetUserInputs("Desired Scroll CC:", 1, "", reaper.GetExtState("scroll_button_cc", "file"))
           scroll_button_cc = scroll_cc_input
           if retval == true then
             reaper.SetExtState("scroll_button_cc", "file", scroll_cc_input, true)
           end
           break
+          
+        -- select_button_cc_ clicked
         elseif mx < (select_button_cc_graph[1] + select_button_cc_graph[3]) and -- select button
-        mx > select_button_cc_graph[1] + scroll_y  and
+        mx > select_button_cc_graph[1]  and
         my > select_button_cc_graph[2] + scroll_y and
-        my < select_button_cc_graph[4] + scroll_y  then
-          reaper.ShowConsoleMsg("done")
+        my < select_button_cc_graph[4] + select_button_cc_graph[3] then
+          retval, select_cc_input = reaper.GetUserInputs("Number Entry", 1, "Desired Select CC: ", reaper.GetExtState("select_button_cc", "file"))
+          select_button_cc = select_cc_input
+          if retval == true then
+            reaper.SetExtState("select_button_cc", "file", select_cc_input, true)
+          end
+          break
         end
       end
     end
@@ -214,10 +220,9 @@ function mainLoop()
     triggered == false and
     currentInputEvent[2]:byte(3) == 127)
 
-    --reaper.ShowConsoleMsg("down: "..tostring(down).."\n")
-    
     if down and fx_chains[selected_fx + 1] ~= nil then
       selected_fx = selected_fx + 1
+      scroll_y = scroll_y - 18
       triggered = true
       
     -- loop selection down key.
@@ -229,16 +234,17 @@ function mainLoop()
     elseif char == 30064 and
     fx_chains[selected_fx - 1] ~= nil then 
       selected_fx = selected_fx - 1
+        scroll_y = scroll_y + 18
       
     -- enter/select
     elseif char == 13 or 
-    (currentInputEvent[2]:byte(2) == 115 and
+    (currentInputEvent[2]:byte(2) == tonumber(select_button_cc) and
     currentInputEvent[1] ~= 0 and
     currentInputEvent[2]:byte(1) & 0xF0 == 176 and
     triggered == false and
     currentInputEvent[2]:byte(3) == 127) then
       triggered = true
-      startFxLoad(sel-ected_fx)
+      startFxLoad(selected_fx)
       reaper.SetExtState("reopen", "file", "false", true)
       return
     end
@@ -248,26 +254,26 @@ function mainLoop()
     if gfx.mouse_wheel ~= 0 then 
       
       scroll_y = scroll_y + (gfx.mouse_wheel / 120) * 20
-      scroll_pos = scroll_pos + 10
+      scrollbar_position = scrollbar_position + 10
       
       if gfx.mouse_wheel < 0 then
-        scroll_pos = scroll_pos + gfx.h * (10 / 100)
+        scrollbar_position = scrollbar_position + gfx.h * (10 / 100)
       elseif gfx.mouse_wheel > 0 then
-        scroll_pos = scroll_pos - gfx.h * (10 / 100)
+        scrollbar_position = scrollbar_position - gfx.h * (10 / 100)
       end
       
       if scroll_y > 0  then
          scroll_y = 0 
-         scroll_pos = 0
+         scrollbar_position = 0
       elseif scroll_y < -max_scroll then
         scroll_y = -max_scroll
-        scroll_pos = window_height - 64
+        scrollbar_position = window_height - 64
       end
       
       gfx.mouse_wheel = 0
     end
     
-    gfx.rect(gfx.w - 8, scroll_pos, 8, 64)
+    gfx.rect(gfx.w - 8, scrollbar_position, 8, 64)
   
       
   end
