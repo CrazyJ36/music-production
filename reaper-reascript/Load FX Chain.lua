@@ -67,6 +67,8 @@ scroll_button_cc = -1
 select_button_cc = -1
 scroll_y = 0
 scroll_offset = 0
+max_scroll = -1
+scroll_pos = 0
 
 function mainLoop()
 
@@ -241,22 +243,32 @@ function mainLoop()
       return
     end
     
-    
-    w, h = gfx.measurestr(help_text)
-    
+    -- scroll
+    max_scroll = math.max(0, fx_chains[#fx_chains].bottom - 144)
     if gfx.mouse_wheel ~= 0 then 
+      
       scroll_y = scroll_y + (gfx.mouse_wheel / 120) * 20
-      max_scroll = math.max(0, fx_chains[#fx_chains].bottom - 150)
-      reaper.ShowConsoleMsg("mouse_wheel: "..gfx.mouse_wheel..", Y: "..gfx.y..", scrollY: "..scroll_y..", Bottom: "..max_scroll.."\n")
+      scroll_pos = scroll_pos + 10
+      
+      if gfx.mouse_wheel < 0 then
+        scroll_pos = scroll_pos + gfx.h * (10 / 100)
+      elseif gfx.mouse_wheel > 0 then
+        scroll_pos = scroll_pos - gfx.h * (10 / 100)
+      end
       
       if scroll_y > 0  then
          scroll_y = 0 
+         scroll_pos = 0
       elseif scroll_y < -max_scroll then
         scroll_y = -max_scroll
+        scroll_pos = window_height - 64
       end
       
       gfx.mouse_wheel = 0
     end
+    
+    gfx.rect(gfx.w - 8, scroll_pos, 8, 64)
+  
       
   end
 
