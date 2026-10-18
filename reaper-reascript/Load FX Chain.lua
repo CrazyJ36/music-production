@@ -2,7 +2,6 @@
 -- don't open again while add_fx/select button is still pressed
 if reaper.GetExtState("reopen", "file") == "false" then
   reaper.SetExtState("reopen", "file", "true", true)
-  reaper.ShowConsoleMsg("Not reopening\n")
   return
 end
 
@@ -62,8 +61,8 @@ button_height = 24
 button_width = 64
 button_radius = 15
 button_start_y = 42
-window_height = 200
-gfx.init("Load FX Chain", 500, window_height)
+gfx.init("Load FX Chain", 500, 200)
+window_height = gfx.h
 gfx.setfont(1, "Arial", 16)
 fx_list_start_y = 48
 refresh_button_graph = {0, button_start_y, button_width, button_height, button_radius}
@@ -74,7 +73,6 @@ selected_fx = 1
 scroll_button_cc = -1
 select_button_cc = -1
 max_scroll = -1
-scrollbar_position = 0
 button_pressed = false
 last_inputValue = -1
 last_inputCC = -1
@@ -219,25 +217,21 @@ function mainLoop()
     end -- end of for loop
     last_mouse_state = mouse_state
     
-    -- highlight next fx and scroll
+    -- highlight next fx and scroll if at end of window
     if button_pressed == false and
     cc == tonumber(scroll_button_cc) and
     inputSuccess and isCC and inputValue == 127 then
       if fx_chains[selected_fx + 1] ~= nil then
         selected_fx = selected_fx + 1
         
-        --max_scroll = math.max(0, gfx.h)
         fx_height_difference = math.abs(fx_chains[selected_fx].bottom - fx_chains[selected_fx].top)
-        if fx_chains[selected_fx].bottom + 48 > gfx.h then
-          reaper.ShowConsoleMsg("refactoring, ".."scrollY: "..scroll_y.."\n")
+        if fx_chains[selected_fx].bottom + 36 > gfx.h then
           scroll_y = scroll_y - fx_height_difference
-          --scrollbar_position = scrollbar_position * (100 / 10)
         end
         
       else
         selected_fx = 1
         scroll_y = 0 
-        scrollbar_position = 0
       end
       button_pressed = true
       last_inputCC = tonumber(scroll_button_cc)
@@ -253,15 +247,6 @@ function mainLoop()
       last_inputValue = inputValue
       return
     end
-  end
-  
-  if gfx.h < fx_chains[#fx_chains].bottom + scroll_y then 
-    gfx.rect(gfx.w - 8, scrollbar_position, 8, 64)
-  end
-  
-  if gfx.h ~= window_height then 
-    window_height = gfx.h
-    reaper.ShowConsoleMsg("new_height: "..gfx.h.."\n")
   end
 
   reaper.defer(mainLoop)
