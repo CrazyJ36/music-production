@@ -78,6 +78,7 @@ last_inputValue = -1
 last_inputCC = -1
 scroll_y = 0
 scrollbar_start = 0
+fx_bottom_mod = 48
 
 -- set nav button CCs
 if reaper.GetExtState("scroll_button_cc", "file") ~= nil then
@@ -218,7 +219,7 @@ function mainLoop()
     end -- end of for loop
     last_mouse_state = mouse_state
     
-    -- highlight next fx and scroll if at end of window
+    -- scroll to next fx and scroll if at end of window
     if button_pressed == false and
     cc == tonumber(scroll_button_cc) and
     inputSuccess and isCC and inputValue == 127 then
@@ -226,15 +227,14 @@ function mainLoop()
         selected_fx = selected_fx + 1
         
         fx_height_difference = math.abs(fx_chains[selected_fx].bottom - fx_chains[selected_fx].top)
-        if fx_chains[selected_fx].bottom + 36 > gfx.h then
+        if fx_chains[selected_fx].bottom + fx_bottom_mod > gfx.h then
           scroll_y = scroll_y - fx_height_difference
-          scrollbar_start = math.abs(scroll_y)
         end
         
       else
         selected_fx = 1
         scroll_y = 0
-        scrollbar_start = 0
+        --scrollbar_start = 0
       end
       button_pressed = true
       last_inputCC = tonumber(scroll_button_cc)
@@ -251,8 +251,20 @@ function mainLoop()
       return
     end
   
-    gfx.rect(gfx.w - 8, scrollbar_start, 8, gfx.h)
-
+  
+    content_height = fx_chains[#fx_chains].bottom + fx_bottom_mod
+    scrollbar_height = (gfx.h / content_height) * gfx.h
+    scrollbar_height = math.max(64, scrollbar_height)
+    
+    max_scroll_y = content_height - gfx.h
+    max_scrollbar_y = gfx.h - scrollbar_height
+    scrollbar_y = (math.abs(scroll_y) / max_scroll_y) * max_scrollbar_y
+    scrollbar_y = math.max(0, math.min(scrollbar_y, max_scrollbar_y))
+    
+  
+    if content_height > gfx.h then
+      gfx.rect(gfx.w - 8, scrollbar_y, 8, scrollbar_height)
+    end
   end
 
   reaper.defer(mainLoop)
