@@ -1,11 +1,12 @@
 --[[ Load and FX Chain for Windows by CrazyJ36 ]]
+
 -- don't open again while add_fx/select button is still pressed
 if reaper.GetExtState("reopen", "file") == "false" then
   reaper.SetExtState("reopen", "file", "true", true)
   return
 end
 
-help_text = "Use mouse wheel, MIDI CC, or key up/down to select.\nUse click, another MIDI button or enter key to launch.\n"
+help_text = "Set MIDI CC button to scroll with, and MIDI CC that will select.\nIf track is not selected, will load on new track.\n"
 fx_chains_dir = os.getenv("APPDATA") .. "\\REAPER\\FXChains\\" -- change this if you're on Linux or Mac.
 
 function getFxChains()
@@ -72,13 +73,10 @@ total_sleep_time = os.clock() + 4
 selected_fx = 1
 scroll_button_cc = -1
 select_button_cc = -1
-max_scroll = -1
 button_pressed = false
 last_inputValue = -1
 last_inputCC = -1
 scroll_y = 0
-scrollbar_start = 0
-fx_bottom_mod = 48
 
 -- set nav button CCs
 if reaper.GetExtState("scroll_button_cc", "file") ~= nil then
@@ -155,18 +153,22 @@ function mainLoop()
     gfx.x = select_button_cc_graph[1] + 3
     gfx.y = select_button_cc_graph[2] + 4 + scroll_y
     gfx.drawstr("Select CC")
+    
+    content_height = fx_chains[#fx_chains].bottom + fx_list_start_y
+      
     -- draw lines around fx selection
+    current_fx_bottom = fx_chains[selected_fx].bottom + fx_list_start_y + scroll_y
     gfx.line(
       0, 
-      fx_chains[selected_fx].bottom + fx_list_start_y + scroll_y,
+      current_fx_bottom,
       gfx.measurestr(fx_chains[selected_fx].friendly_name),
-      fx_chains[selected_fx].bottom + fx_list_start_y + scroll_y
+      current_fx_bottom
     ) -- bottom
     gfx.line(
       0,
       fx_chains[selected_fx].top + fx_list_start_y+ scroll_y,
       0,
-      fx_chains[selected_fx].bottom + fx_list_start_y + scroll_y
+      current_fx_bottom
     ) -- side
 
     -- draw fx list and catch mouse
@@ -225,16 +227,13 @@ function mainLoop()
     inputSuccess and isCC and inputValue == 127 then
       if fx_chains[selected_fx + 1] ~= nil then
         selected_fx = selected_fx + 1
-        
         fx_height_difference = math.abs(fx_chains[selected_fx].bottom - fx_chains[selected_fx].top)
-        if fx_chains[selected_fx].bottom + fx_bottom_mod > gfx.h then
+        if fx_chains[selected_fx].bottom + fx_list_start_y > gfx.h then
           scroll_y = scroll_y - fx_height_difference
         end
-        
       else
         selected_fx = 1
         scroll_y = 0
-        --scrollbar_start = 0
       end
       button_pressed = true
       last_inputCC = tonumber(scroll_button_cc)
@@ -251,16 +250,14 @@ function mainLoop()
       return
     end
   
-  
-    content_height = fx_chains[#fx_chains].bottom + fx_bottom_mod
     scrollbar_height = (gfx.h / content_height) * gfx.h
     scrollbar_height = math.max(64, scrollbar_height)
     
     max_scroll_y = content_height - gfx.h
     max_scrollbar_y = gfx.h - scrollbar_height
+    
     scrollbar_y = (math.abs(scroll_y) / max_scroll_y) * max_scrollbar_y
     scrollbar_y = math.max(0, math.min(scrollbar_y, max_scrollbar_y))
-    
   
     if content_height > gfx.h then
       gfx.rect(gfx.w - 8, scrollbar_y, 8, scrollbar_height)
