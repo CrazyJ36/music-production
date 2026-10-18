@@ -2,6 +2,7 @@
 -- don't open again while add_fx/select button is still pressed
 if reaper.GetExtState("reopen", "file") == "false" then
   reaper.SetExtState("reopen", "file", "true", true)
+  reaper.ShowConsoleMsg("Not reopening\n")
   return
 end
 
@@ -72,11 +73,12 @@ total_sleep_time = os.clock() + 4
 selected_fx = 1
 scroll_button_cc = -1
 select_button_cc = -1
-last_scroll_button_val = -1
-last_select_button_val = -1
-scroll_y = 0
 max_scroll = -1
 scrollbar_position = 0
+button_pressed = false
+last_inputValue = -1
+last_inputCC = -1
+scroll_y = 0
 
 -- set nav button CCs
 if reaper.GetExtState("scroll_button_cc", "file") ~= nil then
@@ -96,8 +98,12 @@ function mainLoop()
   currentInputEvent = {reaper.MIDI_GetRecentInputEvent(0)}
   inputSuccess = currentInputEvent[1] > 0
   isCC = currentInputEvent[2]:byte(1) & 0xF0 == 176
-  currentCC = currentInputEvent[2]:byte(2)
+  cc = currentInputEvent[2]:byte(2)
   inputValue = currentInputEvent[2]:byte(3)
+  
+  if inputValue ~= last_inputValue or cc ~= last_inputCC then
+    button_pressed = false
+  end
   
   -- window closed
   local char = gfx.getchar()
@@ -213,44 +219,44 @@ function mainLoop()
     end -- end of for loop
     last_mouse_state = mouse_state
     
-    -- highlight next fx
-    if currentCC == tonumber(scroll_button_cc) and
-    inputSuccess and isCC and --and inputValue == 127 and
-    last_scroll_button_val ~= inputValue then
+    -- highlight next fx and scroll
+    if button_pressed == false and
+    cc == tonumber(scroll_button_cc) and
+    inputSuccess and isCC and inputValue == 127 then
       if fx_chains[selected_fx + 1] ~= nil then
         selected_fx = selected_fx + 1
+        
+        --max_scroll = math.max(0, gfx.h)
+        fx_height_difference = math.abs(fx_chains[selected_fx].bottom - fx_chains[selected_fx].top)
+        if fx_chains[selected_fx].bottom + 48 > gfx.h then
+          reaper.ShowConsoleMsg("refactoring, ".."scrollY: "..scroll_y.."\n")
+          scroll_y = scroll_y - fx_height_difference
+          --scrollbar_position = scrollbar_position * (100 / 10)
+        end
+        
       else
         selected_fx = 1
+        scroll_y = 0 
+        scrollbar_position = 0
       end
-      last_scroll_button_val = inputValue
-      
-      -- scroll
-      -- get window height for scrollbar
-      
-      --max_scroll = math.max(0, fx_chains[#fx_chains].bottom - 144)
-      --scrollbar_position = scrollbar_position + 10
-      --[[if scroll_y > 0  then
-         scroll_y = 0 
-         --scrollbar_position = 0
-      elseif scroll_y > window_height then --scroll_y < -max_scroll then
-        --scroll_y = -max_scroll
-        --scrollbar_position = gfx.h
-        scroll_y = fx_chains[#fx_chains].bottom
-        --scrollbar_position = scrollbar_position + (gfx.h * (10 / 100))
-      end]]
-      --[[if gfx.h < fx_chains[#fx_chains].bottom + scroll_y then 
-        gfx.rect(gfx.w - 8, scrollbar_position, 8, 64)
-      end]]
+      button_pressed = true
+      last_inputCC = tonumber(scroll_button_cc)
+      last_inputValue = inputValue
       
     -- select fx button
-    elseif currentCC == tonumber(select_button_cc) and
-    inputSuccess and isCC and --inputValue == 127 and 
-    last_select_button_val ~= inputValue then
+    elseif button_pressed == false and cc == tonumber(select_button_cc) and
+    inputSuccess and isCC and inputValue == 127 then
       startFxLoad(selected_fx)
       reaper.SetExtState("reopen", "file", "false", true)
-      last_select_button_val = inputValue
+      button_pressed = true
+      last_inputCC = tonumber(select_button_cc)
+      last_inputValue = inputValue
       return
     end
+  end
+  
+  if gfx.h < fx_chains[#fx_chains].bottom + scroll_y then 
+    gfx.rect(gfx.w - 8, scrollbar_position, 8, 64)
   end
   
   if gfx.h ~= window_height then 
