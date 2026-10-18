@@ -77,6 +77,7 @@ button_pressed = false
 last_inputValue = -1
 last_inputCC = -1
 scroll_y = 0
+scrollbar_start = 0
 
 -- set nav button CCs
 if reaper.GetExtState("scroll_button_cc", "file") ~= nil then
@@ -227,11 +228,13 @@ function mainLoop()
         fx_height_difference = math.abs(fx_chains[selected_fx].bottom - fx_chains[selected_fx].top)
         if fx_chains[selected_fx].bottom + 36 > gfx.h then
           scroll_y = scroll_y - fx_height_difference
+          scrollbar_start = math.abs(scroll_y)
         end
         
       else
         selected_fx = 1
-        scroll_y = 0 
+        scroll_y = 0
+        scrollbar_start = 0
       end
       button_pressed = true
       last_inputCC = tonumber(scroll_button_cc)
@@ -247,6 +250,9 @@ function mainLoop()
       last_inputValue = inputValue
       return
     end
+  
+    gfx.rect(gfx.w - 8, scrollbar_start, 8, gfx.h)
+
   end
 
   reaper.defer(mainLoop)
