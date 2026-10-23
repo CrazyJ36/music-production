@@ -52,13 +52,11 @@ function GetNumPresets(track, fx_idx)
   return num_presets
 end
 
-function IfTableContains(m_table, value) 
-  for _, val in ipairs(m_table) do
-    if val == value then
-      return true
+function TableContains(tbl, x)
+    for _, value in ipairs(tbl) do
+        if value == x then return true end
     end
     return false
-  end
 end
 
 GetPrevPresets()
@@ -71,13 +69,11 @@ elseif preset_name == "Loud" then
 end
 
 
-if not IfTableContains(my_table, preset_name) then
-    my_table[#my_table + 1] = preset_name
-    serializedString = table.concat(my_table, ",")
-    reaper.SetExtState(section_name, section_key, serializedString, true)
+if not TableContains(my_table, preset_name) then
+  my_table[#my_table + 1] = preset_name
+  serializedString = table.concat(my_table, ",")
+  reaper.SetExtState(section_name, section_key, serializedString, true)
 end
-
-
 
 num_params = reaper.TrackFX_GetNumParams(track, fx_idx - 1)
 reaper.ShowConsoleMsg("num_params: "..num_params.."\n")
