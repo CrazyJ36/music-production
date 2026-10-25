@@ -1,34 +1,21 @@
 dofile(reaper.GetResourcePath().."/UserPlugins/ultraschall_api.lua")
-
-reaper.ClearConsole()
+dofile(reaper.GetResourcePath().."/UserPlugins/reagirl.lua")
 
 section_name = "SetAliasParamPerPresetSection"
-section_plugins_key = "plugins"
-section_plugin_presets_key = "presets"
-section_plugin_presets_params_key = "params"
-default_params_key = "default_params"
 
 if false then -- IF 'TRUE' HERE TO RESET.
   reaper.SetExtState(section_name, "", true)
   reaper.ShowConsoleMsg("RESET\n")
 end
 
+section_plugins_key = "plugins"
+section_plugin_presets_key = "presets"
+section_plugin_presets_params_key = "params"
+default_params_key = "default_params"
+
+reaper.ClearConsole()
+
 plugins = {}
-
---[[plugins.plugin1 = { 
-  preset1 = { param11 = "preset1_test", param12 = "preset1_test2" }, 
-  preset2 = { param21 = "preset2_test", param22 = "preset2_test2" } 
-}]]
-
---[[for plugin, presets in pairs(plugins) do
-  reaper.ShowConsoleMsg("plugin "..plugin..":\n")
-  for preset, param in pairs(presets) do
-    for param, value in pairs(param) do
-      reaper.ShowConsoleMsg(param..": "..value.."\n")
-    end
-  end
-end]]
-
 
 track = reaper.GetSelectedTrack(0, 0)
 if track == nil then 
@@ -117,41 +104,54 @@ function GetDefaultParams()
 end
 
 
-params_dialog_title = "Customize param names for current FX and preset."
+function ButtonApply_Run(pressed_button_id)
+  reaper.MB("Button has been pressed - CrazyJ36", "Pressed", 0)
+end
+
+reagirl.Gui_New()
+reagirl.Button_Add(nil, nil, 0, 0, "Apply", "Apply changes and close dialog.", ButtonApply_Run)
+
 default_params = GetDefaultParams()
 current_params = GetFXParams()
 custom_params = {}
 for index, item in ipairs(current_params) do
   table.insert(custom_params, item)
 end
-ctx = reaper.ImGui_CreateContext("Set Alias Param Per Preset")
+
+input_box_description = "Set new alias name for param "
+for i = 1, num_params do
+  input_id = "input"..i
+  reagirl.NextLine()
+  reagirl.Inputbox_Add(nil, nil, 60, default_params[i], nil, input_box_description..i..".", current_params[i])
+end
+
+params_dialog_title = "Customize param names for current FX and preset."
+params_dialog_desc = "This dialog allows to enter custom aliases for params."
+open = reagirl.Gui_Open("Set Alias Param Per Preset", false, params_dialog_title, params_dialog_desc, 300, 600)
+
+
 function SetCustomNames() 
+  reagirl.Gui_Manage()
   --retval, custom_params_string = reaper.GetUserInputs(params_dialog_title, num_params, GetDefaultParams(), current_params_string) 
+  --changed, new_alias = reaper.ImGui_InputText(ctx, "Default: "..default_params[i], new_alias or current_params[i])
   
-  local visible, open = reaper.ImGui_Begin(ctx, params_dialog_title, true)
-  if visible then
+  if reagirl.Gui_IsOpen() then
     
     for i = 1, num_params do
-      new_alias = current_params[i]
-      changed, new_alias = reaper.ImGui_InputText(ctx, "Default: "..default_params[i], new_alias or current_params[i])
+      --new_alias = current_params[i]
+      input_box_id = reagirl.InputBox_Add
       if changed then
         custom_params[i] = new_alias
       else 
         custom_params[i] = current_params[i]
       end
+      reagirl.NextLine()
     end
     
-    if reaper.ImGui_Button(ctx, "Apply") then
-      open = false
-    end
-    reaper.ImGui_End(ctx)
-  end
-  if open then 
     reaper.defer(SetCustomNames)
   end
 end
-
-reaper.defer(SetCustomNames)
+SetCustomNames()
 
 current_params_string = table.concat(current_params, ";")
 for index, custom_param in ipairs(custom_params) do
