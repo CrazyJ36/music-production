@@ -56,6 +56,7 @@ end
 num_params = reaper.TrackFX_GetNumParams(track, current_fx_index)
 
 
+
 if reaper.HasExtState(stored_section_name, stored_settings_key) then
   reaper.ShowConsoleMsg("Loading stored data.\n")
   stored_settings_string = reaper.GetExtState(stored_section_name, stored_settings_key)
@@ -74,55 +75,81 @@ else
   reaper.ShowConsoleMsg("No stored data.\n")
 end
 
+
 settings_table[current_fx] = settings_table[current_fx] or {}
 settings_table[current_fx][current_preset] = settings_table[current_fx][current_preset] or {}
 for i = 0, num_params - 1 do
-  local retval, param = reaper.TrackFX_GetParamName(track, current_fx_index, i)
+  retval, param = reaper.TrackFX_GetParamName(track, current_fx_index, i)
   if retval then
-    settings_table[current_fx][current_preset][param] = param or {}
+    settings_table[current_fx][current_preset][param] = settings_table[current_fx][current_preset][param] or {}
+    param_with_index = param..i
+    
+    param_dict = { [param_with_index] =  "custom" }
+    settings_table[current_fx][current_preset][param] = param_dict --settings_table[current_fx][current_preset][param] or param_dict
+    
+    default_value = settings_table[current_fx][current_preset][param]
+    
+    for key, value in pairs(default_value) do
+      reaper.ShowConsoleMsg("param_dict: "..key..", "..value.."\n")
+    end
   else 
-    reaper.ShowConsoleMsg("Error: Couldn't get param names.\n")
-    return
+    reaper.ShowConsoleMsg("Failed to init last tables\n")
   end
 end
-
-json_string = json.encode(settings_table)
-reaper.SetExtState(stored_section_name, stored_settings_key, json_string, true)
-
 
 
 input_ids = {}
 function ButtonApply_Run(pressed_button_id)
- 
-  local retval, track_state_chunk = reaper.GetTrackStateChunk(track, "", false)
-  for index, input_id in ipairs(input_ids) do
-    local fx_state_chunk = ultraschall.GetFXStateChunk(track_state_chunk)
-      
-    local input_text = reagirl.Inputbox_GetText(input_id)
+  
+  reaper.ShowConsoleMsg("ids size: "..#input_ids.."\n")
+  
+  retval, track_state_chunk = reaper.GetTrackStateChunk(track, "", false)
+  
+  for i = 1, num_params do
     
-    local success, altered_fx_chunk = ultraschall.AddParmAlias_FXStateChunk(fx_state_chunk, current_fx_index + 1, index, "TEST")
+    local input_text = reagirl.Inputbox_GetText(input_ids[i])
+    reaper.ShowConsoleMsg("input_text: "..input_text..", "..input_ids[i].."\n")
+  
+    local fx_state_chunk = ultraschall.GetFXStateChunk(track_state_chunk)
+    local success, altered_fx_chunk = ultraschall.AddParmAlias_FXStateChunk(fx_state_chunk, current_fx_index, index, input_text)
     if not success then -- if already has alias, make new.
-        success, altered_fx_chunk = ultraschall.SetParmAlias2_FXStateChunk(fx_state_chunk, current_fx_index + 1, index, "TEST" )
+        success, altered_fx_chunk = ultraschall.SetParmAlias2_FXStateChunk(fx_state_chunk, current_fx_index, index, input_text)
     end
     
-    _, new_track_state_chunk = ultraschall.SetFXStateChunk(track_state_chunk, altered_fx_chunk)
+    retval, new_track_state_chunk = ultraschall.SetFXStateChunk(track_state_chunk, altered_fx_chunk)
+    if not retval then
+      reaper.ShowConsoleMsg("Failed to set new fx chunk\n")
+      --return
+    end
     
-    retval, param = reaper.TrackFX_GetParamName(track, current_fx_index, index)
-    settings_table[current_fx][current_preset][param] = input_text
+    retval, param = reaper.TrackFX_GetParamName(track, current_fx_index, i)
+    settings_table[current_fx][current_preset][param] = { [param] = input_text }
+    
+    custom_value = settings_table[current_fx][current_preset][param][i]
+    
+    reaper.ShowConsoleMsg("custom: "..custom_value.."\n")
+
   end
+  
   reaper.SetTrackStateChunk(track, new_track_state_chunk, true)
+  
+  json_string = json.encode(settings_table)
+  reaper.SetExtState(stored_section_name, stored_settings_key, json_string, true)
   
   reaper.MB("Check your control surface!", "Done", 0)
 end
 
 reagirl.Gui_New()
 reagirl.Button_Add(nil, nil, 0, 0, "Apply", "Apply changes and close dialog.", ButtonApply_Run)
-
 input_box_description = "Set new alias name for param "
 for i = 0, num_params - 1 do
   reagirl.NextLine()
-  default_param = "Default "..i..": "
   retval, param = reaper.TrackFX_GetParamName(track, current_fx_index, i)
+  for key,value in pairs(settings_table[current_fx][current_preset][param]) do
+    default_param = key
+    break
+  end
+  --default_param = settings_table[current_fx][current_preset][param]
   input_id = reagirl.Inputbox_Add(nil, nil, 300, default_param, 150, input_box_description..i..".", param, nil, nil)
   table.insert(input_ids, input_id)
 end
