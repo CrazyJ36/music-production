@@ -87,7 +87,8 @@ end
   
 input_ids = {}
 function ButtonApply_Run()
-  for i = 1, num_params do
+
+  --for i = 1, num_params do
     --[[retval, param = reaper.TrackFX_GetParamName(track, current_fx_index, i)
     input_text = reagirl.Inputbox_GetText(input_ids[i + 1])
     
@@ -116,10 +117,8 @@ function ButtonApply_Run()
     
       --reaper.MB("Check your control surface!", "Done", 0)
     --end
-  end
-  reaper.ShowConsoleMsg("TYPE: "..type(settings_table).."\n")
+  --end
   json_string = json.encode(settings_table)
-  reaper.ShowConsoleMsg("Saving: "..json_string.."\n")
   reaper.SetExtState(stored_section_name, stored_settings_key, json_string, true)
   --reaper.MB("Check your control surface!", "Done", 0)
 end
