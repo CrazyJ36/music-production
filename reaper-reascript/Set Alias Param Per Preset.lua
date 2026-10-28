@@ -120,8 +120,8 @@ function ButtonApply_Run()
     
       reaper.SetTrackStateChunk(track, new_track_state_chunk, false)]]
       
-  --json_string = json.encode(settings_table)
-  --reaper.SetExtState(stored_section_name, stored_settings_key, json_string, true)
+  json_string = json.encode(settings_table)
+  reaper.SetExtState(stored_section_name, stored_settings_key, json_string, true)
   reaper.MB("Check your control surface!", "Done", 0)
   
   reagirl.Gui_Close()
