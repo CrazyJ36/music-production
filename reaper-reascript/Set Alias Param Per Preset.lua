@@ -57,7 +57,6 @@ param = {}
 settings_table = {}
 settings_table[current_fx] = settings_table[current_fx] or {}
 settings_table[current_fx][current_preset] = settings_table[current_fx][current_preset] or {}
---settings_table[current_fx][current_preset][param] = settings_table[current_fx][current_preset][param] or {}
 ext_state = reaper.GetExtState(stored_section_name, stored_settings_key)
 if ext_state ~= nil and ext_state ~= "" then
   reaper.ShowConsoleMsg("Loading stored data.\n")
@@ -67,36 +66,37 @@ else
   reaper.ShowConsoleMsg("No stored data.\n")
   for i = 0, num_params  - 1 do
     retval, new_param = reaper.TrackFX_GetParamName(track, current_fx_index, i)
-    --settings_table[current_fx][current_preset] = { [new_param] = "alias" }
-    table.insert(settings_table[current_fx][current_preset], { [new_param] = "alias" } )
-    for root_table_index, root_table_value in pairs(settings_table[current_fx][current_preset]) do
-      reaper.ShowConsoleMsg("key: "..root_table_index.."\n")
+    table.insert(settings_table[current_fx][current_preset], { [new_param] = "alias"..i } )
+    --[[for root_table_index, root_table_value in pairs(settings_table[current_fx][current_preset]) do
+      reaper.ShowConsoleMsg("key number: "..root_table_index.."\n")
       for key, value in pairs(root_table_value) do
         reaper.ShowConsoleMsg("key: "..key..", value: "..value.."\n")
       end
- 
-    end
+    end]]
   end
 end
 
 
 input_ids = {}
 function ButtonApply_Run()
-  for index, param_table in ipairs(settings_table[current_fx][current_preset]) do
-    input_text = reagirl.Inputbox_GetText(input_ids[index])
-  
-    -- set settings_table with input_text
-    for key, value in pairs(param_table) do
-      settings_table[current_fx][current_preset] = { [key] = input_text }
-      -- read settings_table param table
-      for key, value in pairs(settings_table[current_fx][current_preset]) do
+
+  --for index, param_table in ipairs(settings_table[current_fx][current_preset]) do
+ 
+    
+    local i = 0
+
+    for key, value in pairs(settings_table[current_fx][current_preset]) do
+      reaper.ShowConsoleMsg("i: "..i.."\n")
+      input_text = reagirl.Inputbox_GetText(input_ids[i + 1])
+      retval, current_param = reaper.TrackFX_GetParamName(track, current_fx_index, i)
+      settings_table[current_fx][current_preset][i + 1] = { [current_param] = input_text }
+      for key, value in pairs(settings_table[current_fx][current_preset][i + 1]) do
         reaper.ShowConsoleMsg("FINAL: "..key..": "..value.."\n")
       end
+      i = i + 1
     end
-    
-  end
+  --end
 
-    --reaper.ShowConsoleMsg("ALIAS: "..settings_table[current_fx][current_preset][param][i][alias][i].."\n")
     --[[if input_text ~= default_params_table[i] then
     
       _, track_state_chunk = reaper.GetTrackStateChunk(track, "", false)
@@ -124,15 +124,15 @@ function ButtonApply_Run()
   --reaper.SetExtState(stored_section_name, stored_settings_key, json_string, true)
   reaper.MB("Check your control surface!", "Done", 0)
   
-  --reagirl.Gui_Close()
+  reagirl.Gui_Close()
 end
 
 reagirl.Gui_New()
 reagirl.Button_Add(nil, nil, 0, 0, "Apply", "Apply changes and close dialog.", ButtonApply_Run)
 input_box_description = "Set new alias name for param "
-for i, m_table in ipairs(settings_table[current_fx][current_preset]) do
+for i, root in ipairs(settings_table[current_fx][current_preset]) do
   reagirl.NextLine()
-  for key, value in pairs(m_table) do
+  for key, value in pairs(root) do
     caption = key
     placeholder = value
   end
