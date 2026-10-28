@@ -48,18 +48,16 @@ else
 end
 num_params = reaper.TrackFX_GetNumParams(track, current_fx_index)
 
-
 dofile(reaper.GetResourcePath().."/UserPlugins/ultraschall_api.lua")
 dofile(reaper.GetResourcePath().."/UserPlugins/reagirl.lua")
 package.path = package.path .. ";" .. reaper.GetResourcePath().."/Scripts/crazyj36-reaper-reascript/" .. "?.lua"
 json = require("json")
 
-
 param = {}
 settings_table = {}
 settings_table[current_fx] = settings_table[current_fx] or {}
 settings_table[current_fx][current_preset] = settings_table[current_fx][current_preset] or {}
-settings_table[current_fx][current_preset][param] = settings_table[current_fx][current_preset][param] or {}
+--settings_table[current_fx][current_preset][param] = settings_table[current_fx][current_preset][param] or {}
 ext_state = reaper.GetExtState(stored_section_name, stored_settings_key)
 if ext_state ~= nil and ext_state ~= "" then
   reaper.ShowConsoleMsg("Loading stored data.\n")
@@ -68,25 +66,34 @@ if ext_state ~= nil and ext_state ~= "" then
 else 
   reaper.ShowConsoleMsg("No stored data.\n")
   for i = 0, num_params  - 1 do
-    local retval, new_param = reaper.TrackFX_GetParamName(track, current_fx_index, i)
-    table.insert(settings_table[current_fx][current_preset][param], { [new_param] = new_param } )
+    retval, new_param = reaper.TrackFX_GetParamName(track, current_fx_index, i)
+    --settings_table[current_fx][current_preset] = { [new_param] = "alias" }
+    table.insert(settings_table[current_fx][current_preset], { [new_param] = "alias" } )
+    for root_table_index, root_table_value in pairs(settings_table[current_fx][current_preset]) do
+      reaper.ShowConsoleMsg("key: "..root_table_index.."\n")
+      for key, value in pairs(root_table_value) do
+        reaper.ShowConsoleMsg("key: "..key..", value: "..value.."\n")
+      end
+ 
+    end
   end
 end
 
-  
+
 input_ids = {}
 function ButtonApply_Run()
-  for index, param_table in ipairs(settings_table[current_fx][current_preset][param]) do
+  for index, param_table in ipairs(settings_table[current_fx][current_preset]) do
     input_text = reagirl.Inputbox_GetText(input_ids[index])
   
     -- set settings_table with input_text
     for key, value in pairs(param_table) do
-      settings_table[current_fx][current_preset][param][index] = { [key] = input_text }
+      settings_table[current_fx][current_preset] = { [key] = input_text }
+      -- read settings_table param table
+      for key, value in pairs(settings_table[current_fx][current_preset]) do
+        reaper.ShowConsoleMsg("FINAL: "..key..": "..value.."\n")
+      end
     end
-    -- read settings_table param table
-    for key, value in pairs(settings_table[current_fx][current_preset][param][index]) do
-      reaper.ShowConsoleMsg("FINAL: "..key..": "..value.."\n")
-    end
+    
   end
 
     --reaper.ShowConsoleMsg("ALIAS: "..settings_table[current_fx][current_preset][param][i][alias][i].."\n")
@@ -112,18 +119,18 @@ function ButtonApply_Run()
       end
     
       reaper.SetTrackStateChunk(track, new_track_state_chunk, false)]]
-  
-  local json_string = json.encode(settings_table)
+      
+  --json_string = json.encode(settings_table)
   --reaper.SetExtState(stored_section_name, stored_settings_key, json_string, true)
-  --reaper.MB("Check your control surface!", "Done", 0)
+  reaper.MB("Check your control surface!", "Done", 0)
   
-  reagirl.Gui_Close()
+  --reagirl.Gui_Close()
 end
 
 reagirl.Gui_New()
 reagirl.Button_Add(nil, nil, 0, 0, "Apply", "Apply changes and close dialog.", ButtonApply_Run)
 input_box_description = "Set new alias name for param "
-for i, m_table in ipairs(settings_table[current_fx][current_preset][param]) do
+for i, m_table in ipairs(settings_table[current_fx][current_preset]) do
   reagirl.NextLine()
   for key, value in pairs(m_table) do
     caption = key
@@ -142,9 +149,5 @@ function RunParamsDialog()
     reaper.defer(RunParamsDialog)
   end
 end
+
 RunParamsDialog() -- TODO: run this if midi button pressed. Show on script load 'you don't have A midi button assigned to set custom names, set one?'
-
-
-
-
-
