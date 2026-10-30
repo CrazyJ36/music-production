@@ -5,7 +5,7 @@ stored_settings_key = "settings"
 
 if false then -- IF 'TRUE' HERE TO RESET
   reaper.SetExtState(stored_section_name, stored_settings_key, "", true)
-  reaper.ShowConsoleMsg("RESET!\n")
+  reaper.ShowConsoleMsg("RESET DATABASE!\n")
   return
 end
 
@@ -72,11 +72,15 @@ if settings_table[current_fx][current_preset] == nil then
 end
 for i = 0, num_params - 1 do
   retval, new_param = reaper.TrackFX_GetParamName(track, current_fx_index, i)
-  settings_table[current_fx][current_preset][new_param] = settings_table[current_fx][current_preset][new_param] or "alias"..i
+  if not retval then
+    reaper.ShowConsoleMsg("Failed to get param name\n")
+    return
+  end
+  settings_table[current_fx][current_preset][new_param] = settings_table[current_fx][current_preset][new_param] or new_param
 end
 
 
-for fx, unknown in pairs(settings_table) do
+for fx, m_table in pairs(settings_table) do
   reaper.ShowConsoleMsg("BEFORE FX: "..fx.."\n")
 end
 for preset, params in pairs(settings_table[current_fx]) do
@@ -90,48 +94,47 @@ end
 input_ids = {} -- reset to empty every run/loop to only receive current param inputIds.
 function ButtonApply_Run()
   
+
   i = 1
   for param, alias in pairs(settings_table[current_fx][current_preset]) do
     input_text = reagirl.Inputbox_GetText(input_ids[i])
     settings_table[current_fx][current_preset][param] = input_text
-    --reaper.ShowConsoleMsg("SETTING to: "..param..": "..alias.."\n")
-    i = i + 1
-  end
   
-
-  --[[for i = 1, num_params do
-
-    input_text = reagirl.Inputbox_GetText(input_ids[i])
-
-    retval, track_state_chunk = reaper.GetTrackStateChunk(track, "", false)
-    if not retval then
-      reaper.ShowConsoleMsg("Failed to get track state chunk\n")
-      return
-    end
+    if input_text ~= param then
+      reaper.ShowConsoleMsg("CHANGED: "..param.."\n")
     
-    fx_state_chunk = ultraschall.GetFXStateChunk(track_state_chunk)
-    success, altered_fx_chunk = ultraschall.AddParmAlias_FXStateChunk(fx_state_chunk, current_fx_index + 1, i, input_text)
-    if not success then 
-      reaper.ShowConsoleMsg("Setting instead of adding alias\n")
-      success2, altered_fx_chunk = ultraschall.SetParmAlias_FXStateChunk(fx_state_chunk, current_fx_index + 1, i, input_text)
-      if not success2 then
-        reaper.ShowConsoleMsg("Failed to set already existing alias\n")
+      retval, track_state_chunk = reaper.GetTrackStateChunk(track, "", false)
+      if not retval then
+        reaper.ShowConsoleMsg("Failed to get track state chunk\n")
+        return
+      end
+      
+      fx_state_chunk = ultraschall.GetFXStateChunk(track_state_chunk)
+      
+      success, altered_fx_chunk = ultraschall.AddParmAlias_FXStateChunk(fx_state_chunk, current_fx_index + 1, i, input_text)
+      if not success then 
+        reaper.ShowConsoleMsg("Setting instead of adding alias\n")
+        success2, altered_fx_chunk = ultraschall.SetParmAlias2_FXStateChunk(fx_state_chunk, current_fx_index + 1, i, input_text)
+        if not success2 then
+          reaper.ShowConsoleMsg("Failed to set already existing alias\n")
+          return
+        end
+      end
+      
+      retval, new_track_state_chunk = ultraschall.SetFXStateChunk(track_state_chunk, altered_fx_chunk)
+      if not retval then
+        reaper.ShowConsoleMsg("Failed to set new fx chunk\n")
+        return
+      end
+      
+      retval = reaper.SetTrackStateChunk(track, new_track_state_chunk, false)
+      if not retval then
+        reaper.ShowConsoleMsg("Failed to set track state chunk\n")
         return
       end
     end
-    retval, new_track_state_chunk = ultraschall.SetFXStateChunk(track_state_chunk, altered_fx_chunk)
-    if not retval then
-      reaper.ShowConsoleMsg("Failed to set new fx chunk\n")
-      return
-    end
-    
-    retval = reaper.SetTrackStateChunk(track, new_track_state_chunk, false)
-    if not retval then
-      reaper.ShowConsoleMsg("Failed to set track state chunk\n")
-      return
-    end
-
-  end]]
+    i = i + 1
+  end
   
   
   reaper.MB("Check your control surface!", "Done", 0)
@@ -159,12 +162,9 @@ function RunParamsDialog()
   if reagirl.Gui_IsOpen() then
     reaper.defer(RunParamsDialog)
   else 
-    reaper.ShowConsoleMsg("EXIT\n")
-    for param, alias in pairs(settings_table[current_fx][current_preset]) do
-      reaper.ShowConsoleMsg("AFTER PARAM: "..param..": "..alias.."\n")
-    end
     json_settings_string = json.encode(settings_table)
     reaper.SetExtState(stored_section_name, stored_settings_key, json_settings_string, true)
+    reaper.ShowConsoleMsg("EXIT\n")
   end
 end
 
