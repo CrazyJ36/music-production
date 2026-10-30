@@ -60,6 +60,7 @@ if settings_ext_state ~= nil and settings_ext_state ~= "" then
   settings_table = json.decode(settings_ext_state) 
 end
 
+
 -- test if settings have been added before for above, if not added above, create tables for current fx/preset.
 if settings_table == nil then
   settings_table = {}
@@ -70,6 +71,7 @@ end
 if settings_table[current_fx][current_preset] == nil then
   settings_table[current_fx][current_preset] = {}
 end
+
 for i = 0, num_params - 1 do
   retval, new_param = reaper.TrackFX_GetParamName(track, current_fx_index, i)
   if not retval then
@@ -80,7 +82,8 @@ for i = 0, num_params - 1 do
 end
 
 
-for fx, m_table in pairs(settings_table) do
+
+--[[for fx, m_table in pairs(settings_table) do
   reaper.ShowConsoleMsg("BEFORE FX: "..fx.."\n")
 end
 for preset, params in pairs(settings_table[current_fx]) do
@@ -88,7 +91,7 @@ for preset, params in pairs(settings_table[current_fx]) do
   for param, alias in pairs(settings_table[current_fx][current_preset]) do
     reaper.ShowConsoleMsg("BEFORE PARAM: "..param..": "..alias.."\n")
   end
-end
+end]]
 
 
 input_ids = {} -- reset to empty every run/loop to only receive current param inputIds.
@@ -103,7 +106,7 @@ function ButtonApply_Run()
     if input_text ~= param then
       reaper.ShowConsoleMsg("CHANGED: "..param.."\n")
     
-      retval, track_state_chunk = reaper.GetTrackStateChunk(track, "", false)
+      --[[retval, track_state_chunk = reaper.GetTrackStateChunk(track, "", false)
       if not retval then
         reaper.ShowConsoleMsg("Failed to get track state chunk\n")
         return
@@ -131,7 +134,7 @@ function ButtonApply_Run()
       if not retval then
         reaper.ShowConsoleMsg("Failed to set track state chunk\n")
         return
-      end
+      end]]
     end
     i = i + 1
   end
