@@ -60,7 +60,6 @@ if settings_ext_state ~= nil and settings_ext_state ~= "" then
   settings_table = json.decode(settings_ext_state) 
 end
 
-
 -- test if settings have been added before for above, if not added above, create tables for current fx/preset.
 if settings_table == nil then
   settings_table = {}
@@ -71,16 +70,15 @@ end
 if settings_table[current_fx][current_preset] == nil then
   settings_table[current_fx][current_preset] = {}
 end
-
 for i = 0, num_params - 1 do
   retval, new_param = reaper.TrackFX_GetParamName(track, current_fx_index, i)
   if not retval then
     reaper.ShowConsoleMsg("Failed to get param name\n")
     return
   end
+  -- set to same as on initialization if exits as to not need if ext_state == nil
   settings_table[current_fx][current_preset][new_param] = settings_table[current_fx][current_preset][new_param] or new_param
 end
-
 
 
 --[[for fx, m_table in pairs(settings_table) do
@@ -97,48 +95,28 @@ end]]
 input_ids = {} -- reset to empty every run/loop to only receive current param inputIds.
 function ButtonApply_Run()
   
-
+  --retval, track_state_chunk = reaper.GetTrackStateChunk(track, "", false)
+  --fx_state_chunk = ultraschall.GetFXStateChunk(track_state_chunk)
+  
   i = 1
   for param, alias in pairs(settings_table[current_fx][current_preset]) do
     input_text = reagirl.Inputbox_GetText(input_ids[i])
-    settings_table[current_fx][current_preset][param] = input_text
-  
+    
     if input_text ~= param then
       reaper.ShowConsoleMsg("CHANGED: "..param.."\n")
-    
-      --[[retval, track_state_chunk = reaper.GetTrackStateChunk(track, "", false)
-      if not retval then
-        reaper.ShowConsoleMsg("Failed to get track state chunk\n")
-        return
-      end
+      settings_table[current_fx][current_preset][param] = input_text
       
-      fx_state_chunk = ultraschall.GetFXStateChunk(track_state_chunk)
-      
-      success, altered_fx_chunk = ultraschall.AddParmAlias_FXStateChunk(fx_state_chunk, current_fx_index + 1, i, input_text)
+      --success, altered_fx_chunk = ultraschall.AddParmAlias_FXStateChunk(fx_state_chunk, current_fx_index + 1, i, input_text)
       if not success then 
-        reaper.ShowConsoleMsg("Setting instead of adding alias\n")
-        success2, altered_fx_chunk = ultraschall.SetParmAlias2_FXStateChunk(fx_state_chunk, current_fx_index + 1, i, input_text)
-        if not success2 then
-          reaper.ShowConsoleMsg("Failed to set already existing alias\n")
-          return
-        end
+        --reaper.ShowConsoleMsg("Setting instead of adding alias\n")
+        --success2, altered_fx_chunk = ultraschall.SetParmAlias2_FXStateChunk(fx_state_chunk, current_fx_index + 1, i, input_text)
       end
-      
-      retval, new_track_state_chunk = ultraschall.SetFXStateChunk(track_state_chunk, altered_fx_chunk)
-      if not retval then
-        reaper.ShowConsoleMsg("Failed to set new fx chunk\n")
-        return
-      end
-      
-      retval = reaper.SetTrackStateChunk(track, new_track_state_chunk, false)
-      if not retval then
-        reaper.ShowConsoleMsg("Failed to set track state chunk\n")
-        return
-      end]]
     end
     i = i + 1
   end
   
+  --retval, new_track_state_chunk = ultraschall.SetFXStateChunk(track_state_chunk, altered_fx_chunk)
+  --retval = reaper.SetTrackStateChunk(track, new_track_state_chunk, false)
   
   reaper.MB("Check your control surface!", "Done", 0)
   reagirl.Gui_Close()
@@ -152,7 +130,7 @@ for key, value in pairs(settings_table[current_fx][current_preset]) do
   reagirl.NextLine()
   caption = key
   placeholder = value
-  input_id = reagirl.Inputbox_Add(nil, nil, 300, caption, 150, input_box_description..(i)..".", placeholder, nil, nil)
+  input_id = reagirl.Inputbox_Add(nil, nil, 300, caption, 150, input_box_description..(i).."("..key..")"..".", placeholder, nil, nil)
   table.insert(input_ids, input_id)
   i = i + 1
 end
