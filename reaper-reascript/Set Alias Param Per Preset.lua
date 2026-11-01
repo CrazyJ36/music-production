@@ -68,7 +68,6 @@ function SetParams(i, input)
     reaper.ShowConsoleMsg("Failed to set fx state chunk in SetParams\n")
     return
   end
-  
 end
 
 
@@ -102,6 +101,8 @@ if settings[current_fx][current_preset] == nil then
     retval, altered_fx_state_chunk = ultraschall.DeleteParmAlias2_FXStateChunk(fx_state_chunk, current_fx_index + 1, i)
     if not retval then
       reaper.ShowConsoleMsg("Failed to delete previous aliases\n")
+    else 
+      reaper.ShowConsoleMsg("Successfully deleted old` aliases.\n")
     end
     retval, new_track_state_chunk = ultraschall.SetFXStateChunk(track_state_chunk, altered_fx_state_chunk)
     local retval = reaper.SetTrackStateChunk(track, new_track_state_chunk, false)
@@ -122,8 +123,6 @@ if stored_last_values_string ~= nil and stored_last_values_string ~= "" then
     for i = 1, num_params do
       for key, value in pairs(settings[current_fx][current_preset][i]) do
         settings[current_fx][current_preset][i] = { [key] = value }
-        retval, param_id = reaper.TrackFX_GetParamIdent(track, current_fx_index, i - 1)
-        param_index = reaper.TrackFX_GetParamFromIdent(track, current_fx_index, param_id)
         SetParams(i, value)
       end
     end
