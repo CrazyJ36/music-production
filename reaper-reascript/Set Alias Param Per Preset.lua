@@ -49,25 +49,27 @@ end
 num_params = reaper.TrackFX_GetNumParams(track, current_fx_index)
 
 
-function SetParams(i, input)
+
+function SetParams(i)
+  for key, value in pairs(settings[current_fx][current_preset][i]) do
+    input = value
+  end
+
   local retval, track_state_chunk = reaper.GetTrackStateChunk(track, "", false)
   local fx_state_chunk = ultraschall.GetFXStateChunk(track_state_chunk)
-
   success, altered_fx_chunk = ultraschall.AddParmAlias_FXStateChunk(fx_state_chunk, current_fx_index + 1, i, input)
-  if not success then 
-    success2, altered_fx_chunk = ultraschall.SetParmAlias2_FXStateChunk(fx_state_chunk, current_fx_index + 1, i, input)
+  if not success then
+    success2, altered_fx_chunk = ultraschall.SetParmAlias_FXStateChunk(fx_state_chunk, current_fx_index + 1, i, input)
     if not success2 then
-      reaper.ShowConsoleMsg("Failed to set ParmAlias in SetParams!\n")
+      reaper.ShowConsoleMsg("Failed to set ParmAlias in SetParams! For I: "..i.."\n")
       return
+    else 
+      reaper.ShowConsoleMsg("Successfully set ParmAlias in SetParams! For I: "..i.."\n")
     end
   end
-  retval, new_track_state_chunk = ultraschall.SetFXStateChunk(track_state_chunk, altered_fx_chunk)
   
+  retval, new_track_state_chunk = ultraschall.SetFXStateChunk(track_state_chunk, altered_fx_chunk)
   local retval = reaper.SetTrackStateChunk(track, new_track_state_chunk, false)
-  if not retval then
-    reaper.ShowConsoleMsg("Failed to set fx state chunk in SetParams\n")
-    return
-  end
 end
 
 
@@ -75,6 +77,7 @@ dofile(reaper.GetResourcePath().."/UserPlugins/ultraschall_api.lua")
 dofile(reaper.GetResourcePath().."/UserPlugins/reagirl.lua")
 package.path = package.path .. ";" .. reaper.GetResourcePath().."/Scripts/crazyj36-reaper-reascript/" .. "?.lua"
 json = require("json")
+
 
 -- restore settings if exists, if not, see below
 settings_ext_state = reaper.GetExtState(stored_section_name, stored_settings_key)
@@ -92,24 +95,25 @@ if settings[current_fx][current_preset] == nil then
   reaper.ShowConsoleMsg("SETTING DEFAULTS FOR THIS PRESET\n")
   settings[current_fx][current_preset] = {}
   for i = 1, num_params do
-    
+  
     retval, param_id = reaper.TrackFX_GetParamIdent(track, current_fx_index, i - 1)
     param_index = reaper.TrackFX_GetParamFromIdent(track, current_fx_index, param_id)
+    reaper.ShowConsoleMsg("param_index: "..param_index.."\n")
+    retval, param_name = reaper.TrackFX_GetParamName(track, current_fx_index, param_index)
     
     local retval, track_state_chunk = reaper.GetTrackStateChunk(track, "", false)
     local fx_state_chunk = ultraschall.GetFXStateChunk(track_state_chunk)
-    retval, altered_fx_state_chunk = ultraschall.DeleteParmAlias2_FXStateChunk(fx_state_chunk, current_fx_index + 1, i)
+  
+    retval, altered_fx_state_chunk = ultraschall.DeleteParmAlias2_FXStateChunk(fx_state_chunk, current_fx_index + 1, param_index)
     if not retval then
       reaper.ShowConsoleMsg("Failed to delete previous aliases\n")
-    else 
-      reaper.ShowConsoleMsg("Successfully deleted old` aliases.\n")
     end
+    
     retval, new_track_state_chunk = ultraschall.SetFXStateChunk(track_state_chunk, altered_fx_state_chunk)
     local retval = reaper.SetTrackStateChunk(track, new_track_state_chunk, false)
 
-    retval, param_name = reaper.TrackFX_GetParamName(track, current_fx_index, param_index)
     table.insert(settings[current_fx][current_preset], { [param_name] = param_name })
-    SetParams(i, param_name)
+    SetParams(param_index + 1)
   end
 end
 
@@ -123,8 +127,8 @@ if stored_last_values_string ~= nil and stored_last_values_string ~= "" then
     for i = 1, num_params do
       for key, value in pairs(settings[current_fx][current_preset][i]) do
         settings[current_fx][current_preset][i] = { [key] = value }
-        SetParams(i, value)
       end
+      SetParams(i)
     end
   end
 end
@@ -136,9 +140,9 @@ function ButtonApply_Run()
     for key, value in pairs(settings[current_fx][current_preset][i]) do
       if input_text ~= value then
         settings[current_fx][current_preset][i] = { [key] = input_text }
-        SetParams(i, input_text)
       end
     end
+    SetParams(i)
   end
   reaper.MB("Check your control surface!", "Done", 0)
   reagirl.Gui_Close()
