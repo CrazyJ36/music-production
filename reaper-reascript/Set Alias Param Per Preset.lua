@@ -63,8 +63,6 @@ function SetParams(i)
     if not success2 then
       reaper.ShowConsoleMsg("Failed to set ParmAlias in SetParams! For I: "..i.."\n")
       return
-    else 
-      reaper.ShowConsoleMsg("Successfully set ParmAlias in SetParams! For I: "..i.."\n")
     end
   end
   
@@ -94,18 +92,20 @@ end
 if settings[current_fx][current_preset] == nil then
   reaper.ShowConsoleMsg("SETTING DEFAULTS FOR THIS PRESET\n")
   settings[current_fx][current_preset] = {}
+  
   for i = 1, num_params do
   
     retval, param_id = reaper.TrackFX_GetParamIdent(track, current_fx_index, i - 1)
     param_index = reaper.TrackFX_GetParamFromIdent(track, current_fx_index, param_id)
-    reaper.ShowConsoleMsg("param_index: "..param_index.."\n")
     retval, param_name = reaper.TrackFX_GetParamName(track, current_fx_index, param_index)
     
     local retval, track_state_chunk = reaper.GetTrackStateChunk(track, "", false)
     local fx_state_chunk = ultraschall.GetFXStateChunk(track_state_chunk)
   
     retval, altered_fx_state_chunk = ultraschall.DeleteParmAlias2_FXStateChunk(fx_state_chunk, current_fx_index + 1, param_index)
-    if not retval then
+    if retval then
+      reaper.ShowConsoleMsg("Successfully deleted previous preset aliases\n")
+    else
       reaper.ShowConsoleMsg("Failed to delete previous aliases\n")
     end
     
@@ -115,6 +115,10 @@ if settings[current_fx][current_preset] == nil then
     table.insert(settings[current_fx][current_preset], { [param_name] = param_name })
     SetParams(param_index + 1)
   end
+  
+  
+  
+  
 end
 
 
