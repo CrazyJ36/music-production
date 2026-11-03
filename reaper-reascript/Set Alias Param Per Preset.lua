@@ -19,7 +19,11 @@ dofile(reaper.GetResourcePath().."/UserPlugins/reagirl.lua")
 package.path = package.path .. ";" .. reaper.GetResourcePath().."/Scripts/crazyj36-reaper-reascript/" .. "?.lua"
 json = require("json")
 
+
+last_values = { "", "" }
+input_ids = {}
 exit = false
+
 
 function GetTrackInfo()
   
@@ -30,17 +34,13 @@ function GetTrackInfo()
     return
   end
   retval, _, _, current_fx_index = reaper.GetFocusedFX()
-  if retval then 
-     --reaper.ShowConsoleMsg("FX Index: "..current_fx_index.."\n") 
-  else 
+  if not retval then
     reaper.ShowConsoleMsg("Error: Couldn't get focued fx\n")
     exit = true
     return
   end
   retval, current_fx = reaper.TrackFX_GetFXName(track, current_fx_index)
-  if retval then
-    --reaper.ShowConsoleMsg("FX Name: "..current_fx.."\n")
-  else 
+  if not retval then
     reaper.ShowConsoleMsg("Error: Is an FX Added to track?\n")
     exit = true
     return
@@ -59,7 +59,9 @@ function GetTrackInfo()
   num_params = reaper.TrackFX_GetNumParams(track, current_fx_index)
 end
 GetTrackInfo()
-if exit then return end
+if exit then 
+  ButtonExit_Run()
+end
 
 
 
@@ -76,7 +78,7 @@ function SetParams(i)
   if not success then
     success2, altered_fx_chunk = ultraschall.SetParmAlias_FXStateChunk(fx_state_chunk, current_fx_index + 1, i, input)
     if not success2 then
-      --reaper.ShowConsoleMsg("Failed to set ParmAlias in SetParams! For I: "..i.."\n")
+      reaper.ShowConsoleMsg("Failed to set ParmAlias in SetParams! For I: "..i.."\n")
       return
     else 
       --reaper.ShowConsoleMsg("Successfully set ParmAlias in SetParams! For I: "..i.."\n")
@@ -130,8 +132,14 @@ end
 CheckSettings()
   
 
+function ButtonExit_Run()
+  exit = true
+end
 
-
+function AtExit()
+  json_settings_string = json.encode(settings)
+  reaper.SetExtState(stored_section_name, stored_settings_key, json_settings_string, true)
+end
 
 function ButtonSetCC_Run()
   retval, dialog_cc = reaper.GetUserInputs("Select Launch CC", 1, "Enter CC that shows param entry", dialog_cc)
@@ -167,12 +175,19 @@ end
 params_dialog_title = "Customize param names for current FX and preset."
 params_dialog_desc = "This dialog allows to enter custom aliases for FX params per-preset."
 input_box_description = "Set new alias name for param "
-last_values = { "", "" }
-input_ids = {}
 
 reagirl.Button_Add(nil, nil, 0, 0, "Apply", "Apply changes and close dialog.", ButtonApply_Run)
 reagirl.Button_Add(nil, nil, 0, 0, "Set CC", "Set which MIDI controller CC message will show param-setting dialog.", ButtonSetCC_Run)
+reagirl.Button_Add(nil, nil, 0, 0, "Quit", "Terminate this script.", ButtonExit_Run)
 
+reagirl.NextLine()
+retval, track_name = reaper.GetTrackName(track)
+track_label_id = reagirl.Label_Add(nil, nil, "Current Track: "..track_name, "Track info.", false, nil, nil)
+reagirl.NextLine()
+fx_label_id = reagirl.Label_Add(nil, nil, "Current FX: "..current_fx, "FX which you're currently controlling.", false, nil, nil)
+reagirl.NextLine()
+preset_label_id = reagirl.Label_Add(nil, nil, "Current Preset: "..current_preset, "Preset which you're currently controlling.", false, nil, nil)
+reagirl.NextLine()
 
 for i = 1, num_params do
   local retval, param_name = reaper.TrackFX_GetParamName(track, current_fx_index, i - 1)
@@ -187,15 +202,26 @@ for i = 1, num_params do
   end
 end
 
-
 function main()
+
   GetTrackInfo() 
-  if exit then return end
+  
   CheckSettings()
+  
+  if exit then
+    AtExit()
+    return
+  end 
+   
 
   if last_values[1] ~= current_fx_index or last_values[2] ~= current_preset_index then
     reaper.ShowConsoleMsg("New Config. last fx: "..last_values[1]..", last preset: "..last_values[2]..", current_preset: "..current_preset.."\n")
     ResetParams()
+    
+    retval, track_name = reaper.GetTrackName(track)
+    reagirl.Label_SetLabelText(track_label_id,  "Current Track: "..track_name)
+    reagirl.Label_SetLabelText(fx_label_id, "Current FX: "..current_fx)
+    reagirl.Label_SetLabelText(preset_label_id, "Current Preset: "..current_preset)
     
     for i = 1, num_params do
       local retval, param_name = reaper.TrackFX_GetParamName(track, current_fx_index, i - 1)
@@ -219,9 +245,7 @@ function main()
       reaper.ShowConsoleMsg("Starting GUI\n")
       reagirl.Gui_Open("Set Alias Param Per Preset", false, params_dialog_title, params_dialog_desc, 350, 600)
       
-      if reagirl.Gui_IsOpen() then
-        
-      else 
+      if not reagirl.Gui_IsOpen() then
         reaper.ShowConsoleMsg("EXIT GUI\n")
       end
   end
@@ -230,8 +254,6 @@ function main()
   
   last_values[1] = current_fx_index
   last_values[2] = current_preset_index
-  json_settings_string = json.encode(settings)
-  reaper.SetExtState(stored_section_name, stored_settings_key, json_settings_string, true)
 
   
   reaper.defer(main)
