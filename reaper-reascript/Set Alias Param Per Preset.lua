@@ -79,6 +79,8 @@ function SetParams()
         
         local retval, new_track_chunk = ultraschall.SetFXStateChunk(track_chunk, altered_fx_chunk)
         local retval = reaper.SetTrackStateChunk(track, new_track_chunk, false)
+        
+        reagirl.Inputbox_SetText(input_ids[i], value)
       end
     end
   end
@@ -93,19 +95,19 @@ function ResetParams()
     local retval, track_chunk = reaper.GetTrackStateChunk(track, "", false)
     local fx_chunk = ultraschall.GetFXStateChunk(track_chunk)
   
-    retval_new_chunk, new_fx_chunk = ultraschall.DeleteParmAlias_FXStateChunk(fx_chunk, current_fx_index + 1, i)
+    local retval_new_chunk, new_fx_chunk = ultraschall.DeleteParmAlias_FXStateChunk(fx_chunk, current_fx_index + 1, i)
     if not retval_new_chunk then
       reaper.ShowConsoleMsg("Failed to delete: "..(i - 1).."\n")
     end
     
-    retval, new_track_chunk = ultraschall.SetFXStateChunk(track_chunk, new_fx_chunk)
+    local retval, new_track_chunk = ultraschall.SetFXStateChunk(track_chunk, new_fx_chunk)
     local retval = reaper.SetTrackStateChunk(track, new_track_chunk, false)
-
+    
   end
 end
 
 function CheckSettings()
-  -- restore settings if exists, if not, see below
+  -- restore settings if exists
   settings_ext_state = reaper.GetExtState(stored_section_name, stored_settings_key)
   if settings_ext_state ~= nil and settings_ext_state ~= "" then
     settings = json.decode(settings_ext_state) 
@@ -148,13 +150,12 @@ function ButtonApply_Run()
     for key, value in pairs(settings[current_fx][current_preset]) do
       if key == param_name then
         if input_text ~= key then
-          --reaper.ShowConsoleMsg("ButtonApply. Setting "..key.." to "..input_text.."\n")
           settings[current_fx][current_preset][param_name] = input_text
         end
       end
     end
   end
-  
+  ResetParams()
   SetParams()
   json_settings_string = json.encode(settings)
   reaper.SetExtState(stored_section_name, stored_settings_key, json_settings_string, true)
@@ -165,10 +166,9 @@ end
 function ButtonReset_Run()
   reaper.SetExtState(stored_section_name, stored_settings_key, "", true)
   reaper.SetExtState(stored_section_name, stored_dialog_cc_key, "-1", true)
-  settings = {}
   reaper.ShowConsoleMsg("RESET DATABASE!\n")
-  exit = true
   ResetParams()
+  exit = true
 end
 
 function SetupDialog() 
@@ -215,12 +215,13 @@ function main()
   if track_info == true then
     
     CheckSettings()
+ 
     
     if last_values[1] ~= track_name or 
     last_values[2] ~= current_fx_index or 
     last_values[3] ~= current_preset_index then
       reaper.ShowConsoleMsg("New Config.\n")
-
+      
       ResetParams()
       
       if not is_dialog_setup then
@@ -233,7 +234,6 @@ function main()
       last_values[2] = current_fx_index
       last_values[3] = current_preset_index
     end
-    
   
     reagirl.Gui_Manage()
     inputEvent = { reaper.MIDI_GetRecentInputEvent(0) }
@@ -245,18 +245,14 @@ function main()
         reaper.ShowConsoleMsg("Starting GUI\n")
         reagirl.Gui_Open("Set Alias Param Per Preset", false, params_dialog_title, params_dialog_desc, 350, 600)
         
+        -- Set input box to current param_name, alias or not.
         for i = 1, num_params do
           local retval, param_name = reaper.TrackFX_GetParamName(track, current_fx_index, i - 1)
           for key, value in pairs(settings[current_fx][current_preset]) do
             if key == param_name then
-              reaper.ShowConsoleMsg("Changing key "..key.." input_id["..i.."] to: "..value.."\n")
               reagirl.Inputbox_SetText(input_ids[i], value)
             end
           end
-        end
-        
-        if not reagirl.Gui_IsOpen() then
-          reaper.ShowConsoleMsg("EXIT GUI\n")
         end
         
         reagirl.Label_SetLabelText(track_label_id,  "Current Track: "..current_track_name)
