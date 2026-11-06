@@ -80,7 +80,13 @@ function SetParams()
         local retval, new_track_chunk = ultraschall.SetFXStateChunk(track_chunk, altered_fx_chunk)
         local retval = reaper.SetTrackStateChunk(track, new_track_chunk, false)
         
-        reagirl.Inputbox_SetText(input_ids[i], value)
+        if reagirl.Gui_IsOpen() then
+      
+          reagirl.Inputbox_SetText(input_ids[i], value)
+          reagirl.Label_SetLabelText(track_label_id,  "Current Track: "..current_track_name)
+          reagirl.Label_SetLabelText(fx_label_id, "Current FX: "..current_fx)
+          reagirl.Label_SetLabelText(preset_label_id, "Current Preset: "..current_preset)
+        end
       end
     end
   end
@@ -118,7 +124,7 @@ function CheckSettings()
   if current_fx ~= nil and settings[current_fx] == nil then
     settings[current_fx] = {}
   end
-  if settings[current_fx][current_preset] == nil then
+  if current_preset ~= nil and settings[current_fx][current_preset] == nil then
     reaper.ShowConsoleMsg("SETTING DEFAULTS FOR THIS PRESET\n")
     settings[current_fx][current_preset] = {}
     ResetParams()
@@ -233,6 +239,7 @@ function main()
       last_values[1] = current_track_name
       last_values[2] = current_fx_index
       last_values[3] = current_preset_index
+
     end
   
     reagirl.Gui_Manage()
@@ -242,27 +249,15 @@ function main()
       inputEvent[2]:byte(2) == dialog_cc and
       inputEvent[2]:byte(3) == 127 and
       not reagirl.Gui_IsOpen() then
-        reaper.ShowConsoleMsg("Starting GUI\n")
-        reagirl.Gui_Open("Set Alias Param Per Preset", false, params_dialog_title, params_dialog_desc, 350, 600)
-        
-        -- Set input box to current param_name, alias or not.
-        for i = 1, num_params do
-          local retval, param_name = reaper.TrackFX_GetParamName(track, current_fx_index, i - 1)
-          for key, value in pairs(settings[current_fx][current_preset]) do
-            if key == param_name then
-              reagirl.Inputbox_SetText(input_ids[i], value)
-            end
-          end
-        end
-        
-        reagirl.Label_SetLabelText(track_label_id,  "Current Track: "..current_track_name)
-        reagirl.Label_SetLabelText(fx_label_id, "Current FX: "..current_fx)
-        reagirl.Label_SetLabelText(preset_label_id, "Current Preset: "..current_preset)
-      
-    end
 
-  else
+        reagirl.Gui_Open("Set Alias Param Per Preset", false, params_dialog_title, params_dialog_desc, 350, 600)
+
+    end
+    
+    last_track_info = track_info
+  elseif track_info ~= last_track_info then
     reaper.ShowConsoleMsg(track_info.."\n")
+    last_track_info = track_info
   end
   
   reaper.defer(main)
