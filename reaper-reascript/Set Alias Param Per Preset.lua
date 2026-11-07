@@ -4,33 +4,34 @@ stored_section_name = "SetAliasParamPerPresetSection"
 stored_settings_key = "settings"
 stored_dialog_cc_key = "dialog_cc"
 
-
-if false then -- IF 'TRUE' HERE TO RESET
-  -- Doesn't reset params, but reset button does.
-  reaper.SetExtState(stored_section_name, stored_settings_key, "", true)
-  reaper.SetExtState(stored_section_name, stored_dialog_cc_key, "-1", true)
-  reaper.ShowConsoleMsg("RESET DATABASE!\n")
-  return
-end
-
-
 dofile(reaper.GetResourcePath().."/UserPlugins/ultraschall_api.lua")
 dofile(reaper.GetResourcePath().."/UserPlugins/reagirl.lua")
 package.path = package.path .. ";" .. reaper.GetResourcePath().."/Scripts/crazyj36-reaper-reascript/" .. "?.lua"
 json = require("json")
 
+if false then -- IF 'TRUE' HERE TO RESET
+  -- Doesn't reset params, but reset button does.
+  settings = {}
+  local json_settings_string = json.encode(settings)
+  reaper.SetExtState(stored_section_name, stored_settings_key, json_settings_string, true)
+  reaper.SetExtState(stored_section_name, stored_dialog_cc_key, "-1", true)
+  reaper.ShowConsoleMsg("RESET DATABASE!\n")
+  return
+end
+
 input_ids = {}
 last_values = { "", "", "" }
+
 exit = false
-
 function ButtonExit_Run()
-  json_settings_string = json.encode(settings)
-  reaper.SetExtState(stored_section_name, stored_settings_key, json_settings_string, true)
   exit = true
+end
+function OnExit() 
+  local json_settings_string = json.encode(settings)
+  reaper.SetExtState(stored_section_name, stored_settings_key, json_settings_string, true)
   reaper.ShowConsoleMsg("EXIT\n")
-end    
-
-reaper.atexit(ButtonExit_Run)
+end
+reaper.atexit(OnExit)
 
 function GetTrackInfo()
   track = reaper.GetSelectedTrack(0, 0)
@@ -64,7 +65,7 @@ function SetParams()
     local retval, param_name = reaper.TrackFX_GetParamName(track, current_fx_index, i - 1)
     for key, value in pairs(settings[current_fx][current_preset]) do
       if key == param_name then
-        reaper.ShowConsoleMsg("key "..key..", value: "..value.."\n")
+        --reaper.ShowConsoleMsg("key "..key..", value: "..value.."\n")
         
         local retval, track_chunk = reaper.GetTrackStateChunk(track, "", false)
         local fx_chunk = ultraschall.GetFXStateChunk(track_chunk)
@@ -72,16 +73,16 @@ function SetParams()
         local success, altered_fx_chunk = ultraschall.AddParmAlias_FXStateChunk(fx_chunk, current_fx_index + 1, i, value)
         if not success then
           success2, altered_fx_chunk = ultraschall.SetParmAlias_FXStateChunk(fx_chunk, current_fx_index + 1, i, value)
-          if not success2 then
+          --[[if not success2 then
             reaper.ShowConsoleMsg("Failed in SetParams for: "..i.."\n")
-          end
+          end]]
         end
         
         local retval, new_track_chunk = ultraschall.SetFXStateChunk(track_chunk, altered_fx_chunk)
         local retval = reaper.SetTrackStateChunk(track, new_track_chunk, false)
         
         if reagirl.Gui_IsOpen() then
-      
+
           reagirl.Inputbox_SetText(input_ids[i], value)
           reagirl.Label_SetLabelText(track_label_id,  "Current Track: "..current_track_name)
           reagirl.Label_SetLabelText(fx_label_id, "Current FX: "..current_fx)
@@ -102,9 +103,9 @@ function ResetParams()
     local fx_chunk = ultraschall.GetFXStateChunk(track_chunk)
   
     local retval_new_chunk, new_fx_chunk = ultraschall.DeleteParmAlias_FXStateChunk(fx_chunk, current_fx_index + 1, i)
-    if not retval_new_chunk then
-      reaper.ShowConsoleMsg("Failed to delete: "..(i - 1).."\n")
-    end
+    --[[if not retval_new_chunk then
+      reaper.ShowConsoleMsg("Failed to delete: "..i.."\n")
+    end]]
     
     local retval, new_track_chunk = ultraschall.SetFXStateChunk(track_chunk, new_fx_chunk)
     local retval = reaper.SetTrackStateChunk(track, new_track_chunk, false)
@@ -113,22 +114,23 @@ function ResetParams()
 end
 
 function CheckSettings()
-  -- restore settings if exists
-  settings_ext_state = reaper.GetExtState(stored_section_name, stored_settings_key)
-  if settings_ext_state ~= nil and settings_ext_state ~= "" then
-    settings = json.decode(settings_ext_state) 
-  end
+  local settings_ext_state = reaper.GetExtState(stored_section_name, stored_settings_key)
+  settings = json.decode(settings_ext_state)
+  
   if settings == nil then
     settings = {}
   end
+  
   if current_fx ~= nil and settings[current_fx] == nil then
     settings[current_fx] = {}
   end
+
   if current_preset ~= nil and settings[current_fx][current_preset] == nil then
-    reaper.ShowConsoleMsg("SETTING DEFAULTS FOR THIS PRESET\n")
+    reaper.ShowConsoleMsg("Setting defaults for this preset\n")
+  
     settings[current_fx][current_preset] = {}
-    ResetParams()
     
+    ResetParams()
     for i = 1, num_params do
       local retval, param_name = reaper.TrackFX_GetParamName(track, current_fx_index, i - 1)
       settings[current_fx][current_preset][param_name] = param_name
@@ -170,10 +172,11 @@ function ButtonApply_Run()
 end
 
 function ButtonReset_Run()
-  reaper.SetExtState(stored_section_name, stored_settings_key, "", true)
-  reaper.SetExtState(stored_section_name, stored_dialog_cc_key, "-1", true)
   reaper.ShowConsoleMsg("RESET DATABASE!\n")
   ResetParams()
+  settings = {}
+  reaper.SetExtState(stored_section_name, stored_dialog_cc_key, "-1", true)
+  ButtonExit_Run()
   exit = true
 end
 
@@ -220,13 +223,12 @@ function main()
   track_info = GetTrackInfo()
   if track_info == true then
     
-    CheckSettings()
- 
-    
     if last_values[1] ~= track_name or 
     last_values[2] ~= current_fx_index or 
     last_values[3] ~= current_preset_index then
       reaper.ShowConsoleMsg("New Config.\n")
+      
+      CheckSettings()
       
       ResetParams()
       
@@ -254,11 +256,10 @@ function main()
 
     end
     
-    last_track_info = track_info
   elseif track_info ~= last_track_info then
     reaper.ShowConsoleMsg(track_info.."\n")
-    last_track_info = track_info
   end
+  last_track_info = track_info
   
   reaper.defer(main)
 end
