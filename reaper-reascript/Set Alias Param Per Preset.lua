@@ -51,6 +51,7 @@ end
 function SetParams()
   reaper.ShowConsoleMsg("SetParams()\n")
   
+
   for i = 1, num_params do
     local retval, param_name = reaper.TrackFX_GetParamName(track, current_fx_index, i - 1)
     for key, value in pairs(settings[current_fx][current_preset]) do
@@ -72,7 +73,6 @@ function SetParams()
         local retval = reaper.SetTrackStateChunk(track, new_track_chunk, false)
         
         if reagirl.Gui_IsOpen() then
-
           reagirl.Inputbox_SetText(input_ids[i], value)
           reagirl.Label_SetLabelText(track_label_id,  "Current Track: "..current_track_name)
           reagirl.Label_SetLabelText(fx_label_id, "Current FX: "..current_fx)
@@ -87,20 +87,30 @@ end
 function ResetParams()
   reaper.ShowConsoleMsg("RESET PARAMS\n")
   
-  for i = num_params, 1, -1 do
   
+  new_fx_chunk = ""
+  for i = num_params, 1, -1 do
+
     local retval, track_chunk = reaper.GetTrackStateChunk(track, "", false)
     local fx_chunk = ultraschall.GetFXStateChunk(track_chunk)
-  
-    local retval_new_chunk, new_fx_chunk = ultraschall.DeleteParmAlias_FXStateChunk(fx_chunk, current_fx_index + 1, i)
-    --[[if not retval_new_chunk then
-      reaper.ShowConsoleMsg("Failed to delete: "..i.."\n")
-    end]]
     
-    local retval, new_track_chunk = ultraschall.SetFXStateChunk(track_chunk, new_fx_chunk)
-    local retval = reaper.SetTrackStateChunk(track, new_track_chunk, false)
-    
+    local parm_idx, alias_name = ultraschall.GetParmAlias_FXStateChunk(fx_chunk, current_fx_index + 1, i)
+    if parm_idx ~= nil then
+      reaper.ShowConsoleMsg("removing id: "..parm_idx..", name: "..alias_name..", i: "..i.."\n")
+      
+      retval, new_fx_chunk = ultraschall.DeleteParmAlias_FXStateChunk(fx_chunk, current_fx_index + 1, i)
+      if not retval then
+        reaper.ShowConsoleMsg("Failed to delete: "..i.."\n")
+      end
+        
+      local retval, new_track_chunk = ultraschall.SetFXStateChunk(track_chunk, new_fx_chunk)
+      local retval = reaper.SetTrackStateChunk(track, new_track_chunk, false)
+    end
   end
+  
+ 
+  
+  
 end
 
 function CheckSettings()
@@ -127,30 +137,7 @@ function CheckSettings()
       settings[current_fx][current_preset][param_name] = param_name
     end
   end
-  
-  --[[local settings_ext_state = reaper.GetExtState(stored_section_name, stored_settings_key)
 
-  if not settings then
-    reaper.ShowConsoleMsg("settings nil\n")
-    settings = {}
-  end
-  
-  if settings and not settings[current_fx] then
-    reaper.ShowConsoleMsg("settings[current_fx] nil\n")
-    settings[current_fx] = {}
-  end
-
-  if settings and settings[current_fx] and not settings[current_fx][current_preset] then
-    reaper.ShowConsoleMsg("Setting defaults for this preset\n")
-  
-    settings[current_fx][current_preset] = {}
-    
-    ResetParams()
-    for i = 1, num_params do
-      local retval, param_name = reaper.TrackFX_GetParamName(track, current_fx_index, i - 1)
-      settings[current_fx][current_preset][param_name] = param_name
-    end
-  end]]
 end
 
 function ButtonExit_Run()
@@ -259,7 +246,7 @@ function main()
         SetupDialog()
       end
     
-      SetParams()
+      --SetParams()
       
       local json_settings_string = json.encode(settings)
       reaper.SetExtState(stored_section_name, stored_settings_key, json_settings_string, true)
