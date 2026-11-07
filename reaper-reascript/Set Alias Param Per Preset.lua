@@ -50,7 +50,7 @@ end
 
 function SetParams()
   reaper.ShowConsoleMsg("SetParams()\n")
-  
+ 
   for key, value in pairs(settings[current_fx][current_preset]) do
     
     if value ~= key then
@@ -76,26 +76,21 @@ function SetParams()
           local retval, new_track_chunk = ultraschall.SetFXStateChunk(track_chunk, altered_fx_chunk)
           local retval = reaper.SetTrackStateChunk(track, new_track_chunk, false)
               
-          --break
         end
-        
       end
     end
-  
   end
   
   if reagirl.Gui_IsOpen() then
-   
-    reagirl.Label_SetLabelText(track_label_id,  "Current Track: "..current_track_name)
-    reagirl.Label_SetLabelText(fx_label_id, "Current FX: "..current_fx)
-    reagirl.Label_SetLabelText(preset_label_id, "Current Preset: "..current_preset)
+    for i = 1, num_params do
+      local retval, param_name = reaper.TrackFX_GetParamName(track, current_fx_index, i - 1)
+      reagirl.Inputbox_SetText(input_ids[i], param_name)
+    end
   end
-  
 end
 
 function ResetParams()
   reaper.ShowConsoleMsg("RESET PARAMS\n")
-  
   
   new_fx_chunk = ""
   for i = num_params, 1, -1 do
@@ -116,9 +111,6 @@ function ResetParams()
       local retval = reaper.SetTrackStateChunk(track, new_track_chunk, false)
     end
   end
-  
- 
-  
   
 end
 
@@ -158,7 +150,7 @@ end
 reaper.atexit(OnExit)
 
 function ButtonSetCC_Run()
-  retval, dialog_cc = reaper.GetUserInputs("Select Launch CC", 1, "Enter CC that shows param entry dialog", dialog_cc)
+  retval, dialog_cc = reaper.GetUserInputs("Select Launch CC", 1, "Enter CC that shows alias dialog:", dialog_cc)
   if retval then
     reaper.SetExtState(stored_section_name, stored_dialog_cc_key, dialog_cc, true)
   end
@@ -185,18 +177,16 @@ function ButtonApply_Run()
   SetParams()
   json_settings_string = json.encode(settings)
   reaper.SetExtState(stored_section_name, stored_settings_key, json_settings_string, true)
-  reaper.MB("Check your control surface!", "Done", 0)
-  reagirl.Gui_Close()
 end
 
 function ButtonReset_Run()
   reaper.ShowConsoleMsg("RESET DATABASE!\n")
   ResetParams()
-  SetParams()
   settings = {}
   local json_settings_string = json.encode(settings)
   reaper.SetExtState(stored_section_name, stored_settings_key, json_settings_string, true)
   reaper.SetExtState(stored_section_name, stored_dialog_cc_key, "-1", true)
+  exit = true
 end
 
 function SetupDialog() 
@@ -248,13 +238,19 @@ function main()
       reaper.ShowConsoleMsg("New Config.\n")
       
       CheckSettings()
-      
-      ResetParams()
-      
+          
       if not is_dialog_setup then
         SetupDialog()
       end
-    
+      
+      if reagirl.Gui_IsOpen() then
+        reagirl.Label_SetLabelText(track_label_id,  "Current Track: "..current_track_name)
+        reagirl.Label_SetLabelText(fx_label_id, "Current FX: "..current_fx)
+        reagirl.Label_SetLabelText(preset_label_id, "Current Preset: "..current_preset)
+      end
+      
+      ResetParams()
+      
       SetParams()
       
       local json_settings_string = json.encode(settings)
