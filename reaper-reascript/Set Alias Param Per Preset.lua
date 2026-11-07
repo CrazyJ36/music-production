@@ -21,17 +21,7 @@ end
 
 input_ids = {}
 last_values = { "", "", "" }
-
 exit = false
-function ButtonExit_Run()
-  exit = true
-end
-function OnExit() 
-  local json_settings_string = json.encode(settings)
-  reaper.SetExtState(stored_section_name, stored_settings_key, json_settings_string, true)
-  reaper.ShowConsoleMsg("EXIT\n")
-end
-reaper.atexit(OnExit)
 
 function GetTrackInfo()
   track = reaper.GetSelectedTrack(0, 0)
@@ -115,7 +105,10 @@ end
 
 function CheckSettings()
   local settings_ext_state = reaper.GetExtState(stored_section_name, stored_settings_key)
-  settings = json.decode(settings_ext_state)
+  
+  if settings_ext_state ~= nil then 
+    settings = json.decode(settings_ext_state)
+  end
   
   if settings == nil then
     settings = {}
@@ -124,8 +117,30 @@ function CheckSettings()
   if current_fx ~= nil and settings[current_fx] == nil then
     settings[current_fx] = {}
   end
+  
+  if settings[current_fx][current_preset] == nil then
+    reaper.ShowConsoleMsg("SETTING DEFAULTS FOR THIS PRESET\n")
+    settings[current_fx][current_preset] = {}
+    ResetParams()
+    for i = 1, num_params do
+      local retval, param_name = reaper.TrackFX_GetParamName(track, current_fx_index, i - 1)
+      settings[current_fx][current_preset][param_name] = param_name
+    end
+  end
+  
+  --[[local settings_ext_state = reaper.GetExtState(stored_section_name, stored_settings_key)
 
-  if current_preset ~= nil and settings[current_fx][current_preset] == nil then
+  if not settings then
+    reaper.ShowConsoleMsg("settings nil\n")
+    settings = {}
+  end
+  
+  if settings and not settings[current_fx] then
+    reaper.ShowConsoleMsg("settings[current_fx] nil\n")
+    settings[current_fx] = {}
+  end
+
+  if settings and settings[current_fx] and not settings[current_fx][current_preset] then
     reaper.ShowConsoleMsg("Setting defaults for this preset\n")
   
     settings[current_fx][current_preset] = {}
@@ -135,8 +150,16 @@ function CheckSettings()
       local retval, param_name = reaper.TrackFX_GetParamName(track, current_fx_index, i - 1)
       settings[current_fx][current_preset][param_name] = param_name
     end
-  end
+  end]]
 end
+
+function ButtonExit_Run()
+  exit = true
+end
+function OnExit() 
+  reaper.ShowConsoleMsg("EXIT\n")
+end
+reaper.atexit(OnExit)
 
 function ButtonSetCC_Run()
   retval, dialog_cc = reaper.GetUserInputs("Select Launch CC", 1, "Enter CC that shows param entry dialog", dialog_cc)
@@ -149,7 +172,6 @@ dialog_cc = tonumber(reaper.GetExtState(stored_section_name, stored_dialog_cc_ke
 if dialog_cc == -1 then
   ButtonSetCC_Run()
 end
-
 
 function ButtonApply_Run()
   for i = 1, num_params do
@@ -174,10 +196,11 @@ end
 function ButtonReset_Run()
   reaper.ShowConsoleMsg("RESET DATABASE!\n")
   ResetParams()
+  SetParams()
   settings = {}
+  local json_settings_string = json.encode(settings)
+  reaper.SetExtState(stored_section_name, stored_settings_key, json_settings_string, true)
   reaper.SetExtState(stored_section_name, stored_dialog_cc_key, "-1", true)
-  ButtonExit_Run()
-  exit = true
 end
 
 function SetupDialog() 
@@ -238,6 +261,9 @@ function main()
     
       SetParams()
       
+      local json_settings_string = json.encode(settings)
+      reaper.SetExtState(stored_section_name, stored_settings_key, json_settings_string, true)
+      
       last_values[1] = current_track_name
       last_values[2] = current_fx_index
       last_values[3] = current_preset_index
@@ -251,9 +277,7 @@ function main()
       inputEvent[2]:byte(2) == dialog_cc and
       inputEvent[2]:byte(3) == 127 and
       not reagirl.Gui_IsOpen() then
-
         reagirl.Gui_Open("Set Alias Param Per Preset", false, params_dialog_title, params_dialog_desc, 350, 600)
-
     end
     
   elseif track_info ~= last_track_info then
