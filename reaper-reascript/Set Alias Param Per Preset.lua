@@ -51,35 +51,44 @@ end
 function SetParams()
   reaper.ShowConsoleMsg("SetParams()\n")
   
-
-  for i = 1, num_params do
-    local retval, param_name = reaper.TrackFX_GetParamName(track, current_fx_index, i - 1)
-    for key, value in pairs(settings[current_fx][current_preset]) do
-      if key == param_name then
-        --reaper.ShowConsoleMsg("key "..key..", value: "..value.."\n")
-        
-        local retval, track_chunk = reaper.GetTrackStateChunk(track, "", false)
-        local fx_chunk = ultraschall.GetFXStateChunk(track_chunk)
-        
-        local success, altered_fx_chunk = ultraschall.AddParmAlias_FXStateChunk(fx_chunk, current_fx_index + 1, i, value)
-        if not success then
-          success2, altered_fx_chunk = ultraschall.SetParmAlias_FXStateChunk(fx_chunk, current_fx_index + 1, i, value)
-          --[[if not success2 then
-            reaper.ShowConsoleMsg("Failed in SetParams for: "..i.."\n")
-          end]]
+  for key, value in pairs(settings[current_fx][current_preset]) do
+    
+    if value ~= key then
+      target_alias = key
+      
+      for i = 1, num_params do 
+        local retval, param_name = reaper.TrackFX_GetParamName(track, current_fx_index, i - 1)
+      
+        if param_name == target_alias then
+          reaper.ShowConsoleMsg("Setting: "..param_name.." to "..value.." at: "..i.."\n")
+          
+          local retval, track_chunk = reaper.GetTrackStateChunk(track, "", false)
+          local fx_chunk = ultraschall.GetFXStateChunk(track_chunk)
+          
+          local success, altered_fx_chunk = ultraschall.AddParmAlias_FXStateChunk(fx_chunk, current_fx_index + 1, i, value)
+          if not success then
+            success2, altered_fx_chunk = ultraschall.SetParmAlias_FXStateChunk(fx_chunk, current_fx_index + 1, i, value)
+            if not success2 then
+              reaper.ShowConsoleMsg("Failed in SetParams for: "..i.."\n")
+            end
+          end
+          
+          local retval, new_track_chunk = ultraschall.SetFXStateChunk(track_chunk, altered_fx_chunk)
+          local retval = reaper.SetTrackStateChunk(track, new_track_chunk, false)
+              
+          --break
         end
         
-        local retval, new_track_chunk = ultraschall.SetFXStateChunk(track_chunk, altered_fx_chunk)
-        local retval = reaper.SetTrackStateChunk(track, new_track_chunk, false)
-        
-        if reagirl.Gui_IsOpen() then
-          reagirl.Inputbox_SetText(input_ids[i], value)
-          reagirl.Label_SetLabelText(track_label_id,  "Current Track: "..current_track_name)
-          reagirl.Label_SetLabelText(fx_label_id, "Current FX: "..current_fx)
-          reagirl.Label_SetLabelText(preset_label_id, "Current Preset: "..current_preset)
-        end
       end
     end
+  
+  end
+  
+  if reagirl.Gui_IsOpen() then
+   
+    reagirl.Label_SetLabelText(track_label_id,  "Current Track: "..current_track_name)
+    reagirl.Label_SetLabelText(fx_label_id, "Current FX: "..current_fx)
+    reagirl.Label_SetLabelText(preset_label_id, "Current Preset: "..current_preset)
   end
   
 end
@@ -96,7 +105,7 @@ function ResetParams()
     
     local parm_idx, alias_name = ultraschall.GetParmAlias_FXStateChunk(fx_chunk, current_fx_index + 1, i)
     if parm_idx ~= nil then
-      reaper.ShowConsoleMsg("removing id: "..parm_idx..", name: "..alias_name..", i: "..i.."\n")
+      reaper.ShowConsoleMsg("removing alias: "..parm_idx..", name: "..alias_name..", i: "..i.."\n")
       
       retval, new_fx_chunk = ultraschall.DeleteParmAlias_FXStateChunk(fx_chunk, current_fx_index + 1, i)
       if not retval then
@@ -246,7 +255,7 @@ function main()
         SetupDialog()
       end
     
-      --SetParams()
+      SetParams()
       
       local json_settings_string = json.encode(settings)
       reaper.SetExtState(stored_section_name, stored_settings_key, json_settings_string, true)
