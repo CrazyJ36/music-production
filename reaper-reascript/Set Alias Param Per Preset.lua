@@ -82,6 +82,9 @@ function SetParams()
   end
   
   if reagirl.Gui_IsOpen() then
+    reagirl.Label_SetLabelText(track_label_id,  "Current Track: "..current_track_name)
+    reagirl.Label_SetLabelText(fx_label_id, "Current FX: "..current_fx)
+    reagirl.Label_SetLabelText(preset_label_id, "Current Preset: "..current_preset)
     for i = 1, num_params do
       local retval, param_name = reaper.TrackFX_GetParamName(track, current_fx_index, i - 1)
       reagirl.Inputbox_SetText(input_ids[i], param_name)
@@ -241,12 +244,6 @@ function main()
           
       if not is_dialog_setup then
         SetupDialog()
-      end
-      
-      if reagirl.Gui_IsOpen() then
-        reagirl.Label_SetLabelText(track_label_id,  "Current Track: "..current_track_name)
-        reagirl.Label_SetLabelText(fx_label_id, "Current FX: "..current_fx)
-        reagirl.Label_SetLabelText(preset_label_id, "Current Preset: "..current_preset)
       end
       
       ResetParams()
