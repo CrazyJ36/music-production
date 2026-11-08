@@ -4,14 +4,14 @@ stored_section_name = "SetAliasParamPerPresetSection"
 stored_settings_key = "settings"
 stored_dialog_cc_key = "dialog_cc"
 
-dofile(reaper.GetResourcePath().."/UserPlugins/ultraschall_api.lua")
-dofile(reaper.GetResourcePath().."/UserPlugins/reagirl.lua")
-package.path = package.path .. ";" .. reaper.GetResourcePath().."/Scripts/crazyj36-reaper-reascript/" .. "?.lua"
+package.path = package.path .. ";" .. reaper.GetResourcePath().."/Scripts/crazyj36-reaper-reascript/" .. "?.lua" -- get json.lua from same directory.
 json = require("json")
 
 if false then -- IF 'TRUE' HERE TO RESET
   -- Doesn't reset params, but reset button does.
   settings = {}
+  input_ids = {}
+  last_values = { "", "", "" }
   local json_settings_string = json.encode(settings)
   reaper.SetExtState(stored_section_name, stored_settings_key, json_settings_string, true)
   reaper.SetExtState(stored_section_name, stored_dialog_cc_key, "-1", true)
@@ -19,16 +19,21 @@ if false then -- IF 'TRUE' HERE TO RESET
   return
 end
 
+
+params_dialog_title = "Customize param names for current FX and preset."
+params_dialog_desc = "This dialog allows to enter custom aliases for FX params per-preset."
+input_box_description = "Set new alias name for param "
+dofile(reaper.GetResourcePath().."/UserPlugins/ultraschall_api.lua")
+dofile(reaper.GetResourcePath().."/UserPlugins/reagirl.lua")
 input_ids = {}
 last_values = { "", "", "" }
-exit = false
 
 function GetTrackInfo()
   track = reaper.GetLastTouchedTrack()
   if track == nil then 
     return "Error: Is A Track added and selected?\n"
   end
-  retval, _, _, current_fx_index = reaper.GetFocusedFX()
+  retval, _, current_fx_index, _ = reaper.GetLastTouchedFX() -- last touched includes midi compared to focuesFX
   if not retval then
     return "Error: Couldn't get focued fx\n"
   end
@@ -47,11 +52,6 @@ function GetTrackInfo()
   retval, current_track_name = reaper.GetTrackName(track)
   return true
 end
-
-params_dialog_title = "Customize param names for current FX and preset."
-params_dialog_desc = "This dialog allows to enter custom aliases for FX params per-preset."
-input_box_description = "Set new alias name for param "
-
 
 function SetParams()
   reaper.ShowConsoleMsg("SetParams()\n")
@@ -85,16 +85,6 @@ function SetParams()
       end
     end
   end
-  
-  --[[if reagirl.Gui_IsOpen() then
-    reagirl.Label_SetLabelText(track_label_id,  "Current Track: "..current_track_name)
-    reagirl.Label_SetLabelText(fx_label_id, "Current FX: "..current_fx)
-    reagirl.Label_SetLabelText(preset_label_id, "Current Preset: "..current_preset)
-    for i = 1, #input_ids do
-      local retval, param_name = reaper.TrackFX_GetParamName(track, current_fx_index, i - 1)
-      reagirl.Inputbox_SetText(input_ids[i], param_name)
-    end
-  end]]
 end
 
 function ResetParams()
@@ -149,6 +139,7 @@ function CheckSettings()
 
 end
 
+exit = false
 function ButtonExit_Run()
   exit = true
 end
@@ -183,7 +174,7 @@ function ButtonApply_Run()
   end
   ResetParams()
   SetParams()
-  json_settings_string = json.encode(settings)
+  local json_settings_string = json.encode(settings)
   reaper.SetExtState(stored_section_name, stored_settings_key, json_settings_string, true)
 end
 
@@ -191,6 +182,8 @@ function ButtonReset_Run()
   reaper.ShowConsoleMsg("RESET DATABASE!\n")
   ResetParams()
   settings = {}
+  input_ids = {}
+  last_values = { "", "", "" }
   local json_settings_string = json.encode(settings)
   reaper.SetExtState(stored_section_name, stored_settings_key, json_settings_string, true)
   reaper.SetExtState(stored_section_name, stored_dialog_cc_key, "-1", true)
@@ -198,7 +191,6 @@ function ButtonReset_Run()
 end
 
 function SetupDialog()
-
   local apply_button_id = reagirl.Button_Add(nil, nil, 0, 0, "Apply", "Apply changes and close dialog.", ButtonApply_Run)
   local cc_button_id = reagirl.Button_Add(nil, nil, 0, 0, "Set CC", "Set which MIDI controller CC message will show param-setting dialog.", ButtonSetCC_Run)
   local reset_button_id = reagirl.Button_Add(nil, nil, 0, 0, "Reset", "Reset this scripts stored settings and Reaper aliases.", ButtonReset_Run)
@@ -210,8 +202,7 @@ function SetupDialog()
   fx_label_id = reagirl.Label_Add(nil, nil, "Current FX: "..current_fx, "FX which you're currently controlling.", false, nil, nil)
   reagirl.NextLine()
   preset_label_id = reagirl.Label_Add(nil, nil, "Current Preset: "..current_preset, "Preset which you're currently controlling.", false, nil, nil)
-  reagirl.NextLine()
-      
+  
   is_dialog_setup = true
 end
 
@@ -223,14 +214,13 @@ function main()
   track_info = GetTrackInfo()
   if track_info == true then
   
-     
     if last_values[1] ~= current_track_name or 
     last_values[2] ~= current_fx_index or 
     last_values[3] ~= current_preset_index then
       reaper.ShowConsoleMsg("New Config.\n")
       
       CheckSettings()
-          
+      
       if not is_dialog_setup then
         SetupDialog()
       end
@@ -239,17 +229,26 @@ function main()
       reagirl.Label_SetLabelText(fx_label_id, "Current FX: "..current_fx)
       reagirl.Label_SetLabelText(preset_label_id, "Current Preset: "..current_preset)
       
+      ResetParams()
+      SetParams()
+      
+
       for i = 1, #input_ids do
-        reagirl.UI_Element_Remove(input_ids[i])
+        local success, result = pcall(
+          function()
+            reagirl.UI_Element_Remove(input_ids[i])
+          end
+        )
         input_ids[i] = nil
       end
-      
+    
+      -- MOVE THIS, THIS METHOD KEEPS ORDER OF PARAMS
       for i = 1, num_params do
         local retval, param_name = reaper.TrackFX_GetParamName(track, current_fx_index, i - 1)
         for key, value in pairs(settings[current_fx][current_preset]) do
-          if key == param_name then
-            caption = key
-            placeholder = value
+          if key == param_name or value == param_name then -- ITS THIS
+            local caption = key
+            local placeholder = value
             reagirl.NextLine()
             input_id = reagirl.Inputbox_Add(nil, nil, 300, caption, 150, input_box_description..(i)..".", placeholder, nil, nil)
             input_ids[i] = input_id
@@ -257,12 +256,6 @@ function main()
           end
         end
       end
-       
-      ResetParams()
-      SetParams()
-      
-      local json_settings_string = json.encode(settings)
-      reaper.SetExtState(stored_section_name, stored_settings_key, json_settings_string, true)
       
       last_values[1] = current_track_name
       last_values[2] = current_fx_index
