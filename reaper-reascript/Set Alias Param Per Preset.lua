@@ -19,7 +19,6 @@ if false then -- IF 'TRUE' HERE TO RESET
   return
 end
 
-
 params_dialog_title = "Customize param names for current FX and preset."
 params_dialog_desc = "This dialog allows to enter custom aliases for FX params per-preset."
 input_box_description = "Set new alias name for param "
@@ -33,23 +32,23 @@ function GetTrackInfo()
   if track == nil then 
     return "Error: Is A Track added and selected?\n"
   end
-  retval, _, current_fx_index, _ = reaper.GetLastTouchedFX() -- last touched includes midi compared to focuesFX
+  retval, _, _, _, current_fx_index, _ = reaper.GetTouchedOrFocusedFX(1)
   if not retval then
-    return "Error: Couldn't get focued fx\n"
+    retval, _, _, _, current_fx_index, _ = reaper.GetTouchedOrFocusedFX(0)
+    if not retval then
+      return "Error: Is an FX added to this track?\n"
+    end
   end
   retval, current_fx = reaper.TrackFX_GetFXName(track, current_fx_index)
-  if not retval then
-    return "Error: Is an FX Added to track?\n"
-  end
   current_preset_index, num_presets = reaper.TrackFX_GetPresetIndex(track, current_fx_index)
   if num_presets == 0 then
     return "Error: Does this FX have any presets?\n"
   elseif current_preset_index == -1 then
     return "Error: Is A preset selected?"
   end
+  retval, current_track_name = reaper.GetTrackName(track)
   retval, current_preset = reaper.TrackFX_GetPreset(track, current_fx_index)
   num_params = reaper.TrackFX_GetNumParams(track, current_fx_index)
-  retval, current_track_name = reaper.GetTrackName(track)
   return true
 end
 
@@ -114,7 +113,6 @@ end
 
 function CheckSettings()
   local settings_ext_state = reaper.GetExtState(stored_section_name, stored_settings_key)
-  
   if settings_ext_state ~= nil then 
     settings = json.decode(settings_ext_state)
   end
@@ -123,10 +121,10 @@ function CheckSettings()
     settings = {}
   end
   
-  if current_fx ~= nil and settings[current_fx] == nil then
+  if settings[current_fx] == nil then
     settings[current_fx] = {}
   end
-  
+ 
   if settings[current_fx][current_preset] == nil then
     reaper.ShowConsoleMsg("SETTING DEFAULTS FOR THIS PRESET\n")
     settings[current_fx][current_preset] = {}
@@ -231,7 +229,6 @@ function main()
       
       ResetParams()
       SetParams()
-      
 
       for i = 1, #input_ids do
         local success, result = pcall(
@@ -242,7 +239,7 @@ function main()
         input_ids[i] = nil
       end
     
-      -- MOVE THIS, THIS METHOD KEEPS ORDER OF PARAMS
+      -- MOVE THIS. USING THIS METHOD KEEPS ORDER OF PARAMS
       for i = 1, num_params do
         local retval, param_name = reaper.TrackFX_GetParamName(track, current_fx_index, i - 1)
         for key, value in pairs(settings[current_fx][current_preset]) do
@@ -257,6 +254,9 @@ function main()
         end
       end
       
+      local json_settings_string = json.encode(settings)
+      reaper.SetExtState(stored_section_name, stored_settings_key, json_settings_string, true)
+       
       last_values[1] = current_track_name
       last_values[2] = current_fx_index
       last_values[3] = current_preset_index
