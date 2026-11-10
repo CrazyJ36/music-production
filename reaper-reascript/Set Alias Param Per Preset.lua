@@ -19,32 +19,30 @@ if false then -- IF 'TRUE' HERE TO RESET
   return
 end
 
+dofile(reaper.GetResourcePath().."/UserPlugins/ultraschall_api.lua")
+dofile(reaper.GetResourcePath().."/UserPlugins/reagirl.lua")
 params_dialog_title = "Customize param names for current FX and preset."
 params_dialog_desc = "This dialog allows to enter custom aliases for FX params per-preset."
 input_box_description = "Set new alias name for param "
-dofile(reaper.GetResourcePath().."/UserPlugins/ultraschall_api.lua")
-dofile(reaper.GetResourcePath().."/UserPlugins/reagirl.lua")
 input_ids = {}
 last_values = { "", "", "" }
 
 function GetTrackInfo()
-  track = reaper.GetLastTouchedTrack()
-  if track == nil then 
-    return "Error: Is A Track added and selected?\n"
-  end
-  retval, _, _, _, current_fx_index, _ = reaper.GetTouchedOrFocusedFX(1)
+  retval, trackIdx, _, _, current_fx_index, _ = reaper.GetTouchedOrFocusedFX(1)
   if not retval then
-    retval, _, _, _, current_fx_index, _ = reaper.GetTouchedOrFocusedFX(0)
-    if not retval then
-      return "Error: Is an FX added to this track?\n"
-    end
+    return "No focused FX."
+  end
+  if trackIdx == -1 then
+    track = reaper.GetMasterTrack(0)
+  else 
+    track = reaper.GetTrack(0, trackIdx)
   end
   retval, current_fx = reaper.TrackFX_GetFXName(track, current_fx_index)
   current_preset_index, num_presets = reaper.TrackFX_GetPresetIndex(track, current_fx_index)
   if num_presets == 0 then
     return "Error: Does this FX have any presets?\n"
   elseif current_preset_index == -1 then
-    return "Error: Is A preset selected?"
+    return "Error: Is an FX preset selected?"
   end
   retval, current_track_name = reaper.GetTrackName(track)
   retval, current_preset = reaper.TrackFX_GetPreset(track, current_fx_index)
@@ -54,6 +52,10 @@ end
 
 function SetParams()
   reaper.ShowConsoleMsg("SetParams()\n")
+ 
+ 
+  local retval, track_chunk = reaper.GetTrackStateChunk(track, "", false)
+  local fx_chunk = ultraschall.GetFXStateChunk(track_chunk)
  
   for key, value in pairs(settings[current_fx][current_preset]) do
     
@@ -65,9 +67,6 @@ function SetParams()
       
         if param_name == target_alias then
           reaper.ShowConsoleMsg("Setting: "..param_name.." to "..value.." at: "..i.."\n")
-          
-          local retval, track_chunk = reaper.GetTrackStateChunk(track, "", false)
-          local fx_chunk = ultraschall.GetFXStateChunk(track_chunk)
           
           local success, altered_fx_chunk = ultraschall.AddParmAlias_FXStateChunk(fx_chunk, current_fx_index + 1, i, value)
           if not success then
@@ -89,12 +88,11 @@ end
 function ResetParams()
   reaper.ShowConsoleMsg("RESET PARAMS\n")
   
-  new_fx_chunk = ""
+  local retval, track_chunk = reaper.GetTrackStateChunk(track, "", false)
+  local fx_chunk = ultraschall.GetFXStateChunk(track_chunk)
+  
   for i = num_params, 1, -1 do
 
-    local retval, track_chunk = reaper.GetTrackStateChunk(track, "", false)
-    local fx_chunk = ultraschall.GetFXStateChunk(track_chunk)
-    
     local parm_idx, alias_name = ultraschall.GetParmAlias_FXStateChunk(fx_chunk, current_fx_index + 1, i)
     if parm_idx ~= nil then
       reaper.ShowConsoleMsg("removing alias: "..parm_idx..", name: "..alias_name..", i: "..i.."\n")
@@ -142,6 +140,8 @@ function ButtonExit_Run()
   exit = true
 end
 function OnExit() 
+  local json_settings_string = json.encode(settings)
+  reaper.SetExtState(stored_section_name, stored_settings_key, json_settings_string, true)
   reaper.ShowConsoleMsg("EXIT\n")
 end
 reaper.atexit(OnExit)
@@ -230,6 +230,7 @@ function main()
       ResetParams()
       SetParams()
 
+      -- remove any previous inputs, regardless of if there's a different number of them now.
       for i = 1, #input_ids do
         local success, result = pcall(
           function()
@@ -239,11 +240,11 @@ function main()
         input_ids[i] = nil
       end
     
-      -- MOVE THIS. USING THIS METHOD KEEPS ORDER OF PARAMS
+      -- USING THIS METHOD KEEPS ORDER OF PARAMS.
       for i = 1, num_params do
         local retval, param_name = reaper.TrackFX_GetParamName(track, current_fx_index, i - 1)
         for key, value in pairs(settings[current_fx][current_preset]) do
-          if key == param_name or value == param_name then -- ITS THIS
+          if key == param_name or value == param_name then
             local caption = key
             local placeholder = value
             reagirl.NextLine()
