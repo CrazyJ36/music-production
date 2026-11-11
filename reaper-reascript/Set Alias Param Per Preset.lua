@@ -54,8 +54,6 @@ function SetParams()
   reaper.ShowConsoleMsg("SetParams()\n")
  
  
-  local retval, track_chunk = reaper.GetTrackStateChunk(track, "", false)
-  local fx_chunk = ultraschall.GetFXStateChunk(track_chunk)
  
   for key, value in pairs(settings[current_fx][current_preset]) do
     
@@ -67,6 +65,9 @@ function SetParams()
       
         if param_name == target_alias then
           reaper.ShowConsoleMsg("Setting: "..param_name.." to "..value.." at: "..i.."\n")
+          
+          local retval, track_chunk = reaper.GetTrackStateChunk(track, "", false)
+          local fx_chunk = ultraschall.GetFXStateChunk(track_chunk)
           
           local success, altered_fx_chunk = ultraschall.AddParmAlias_FXStateChunk(fx_chunk, current_fx_index + 1, i, value)
           if not success then
@@ -88,14 +89,16 @@ end
 function ResetParams()
   reaper.ShowConsoleMsg("RESET PARAMS\n")
   
-  local retval, track_chunk = reaper.GetTrackStateChunk(track, "", false)
-  local fx_chunk = ultraschall.GetFXStateChunk(track_chunk)
-  
   for i = num_params, 1, -1 do
-
+  
+    local retval, track_chunk = reaper.GetTrackStateChunk(track, "", false)
+    local fx_chunk = ultraschall.GetFXStateChunk(track_chunk)
+      
     local parm_idx, alias_name = ultraschall.GetParmAlias_FXStateChunk(fx_chunk, current_fx_index + 1, i)
+  
     if parm_idx ~= nil then
       reaper.ShowConsoleMsg("removing alias: "..parm_idx..", name: "..alias_name..", i: "..i.."\n")
+      
       
       retval, new_fx_chunk = ultraschall.DeleteParmAlias_FXStateChunk(fx_chunk, current_fx_index + 1, i)
       if not retval then
@@ -159,18 +162,18 @@ if dialog_cc == -1 then
 end
 
 function ButtonApply_Run()
+  ResetParams()
   for i = 1, num_params do
     input_text = reagirl.Inputbox_GetText(input_ids[i])
     local retval, param_name = reaper.TrackFX_GetParamName(track, current_fx_index, i - 1)
     for key, value in pairs(settings[current_fx][current_preset]) do
       if key == param_name then
         if input_text ~= key then
-          settings[current_fx][current_preset][param_name] = input_text
+          settings[current_fx][current_preset][key] = input_text
         end
       end
     end
   end
-  ResetParams()
   SetParams()
   local json_settings_string = json.encode(settings)
   reaper.SetExtState(stored_section_name, stored_settings_key, json_settings_string, true)
