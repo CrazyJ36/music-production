@@ -15,7 +15,7 @@ if false then -- IF 'TRUE' HERE TO RESET
   local json_settings_string = json.encode(settings)
   reaper.SetExtState(stored_section_name, stored_settings_key, json_settings_string, true)
   reaper.SetExtState(stored_section_name, stored_dialog_cc_key, "-1", true)
-  reaper.ShowConsoleMsg("RESET DATABASE!\n")
+  --reaper.ShowConsoleMsg("RESET DATABASE!\n")
   return
 end
 
@@ -51,10 +51,8 @@ function GetTrackInfo()
 end
 
 function SetParams()
-  reaper.ShowConsoleMsg("SetParams()\n")
- 
- 
- 
+  --reaper.ShowConsoleMsg("SetParams()\n")
+
   for key, value in pairs(settings[current_fx][current_preset]) do
     
     if value ~= key then
@@ -64,7 +62,7 @@ function SetParams()
         local retval, param_name = reaper.TrackFX_GetParamName(track, current_fx_index, i - 1)
       
         if param_name == target_alias then
-          reaper.ShowConsoleMsg("Setting: "..param_name.." to "..value.." at: "..i.."\n")
+          --reaper.ShowConsoleMsg("Setting: "..param_name.." to "..value.." at: "..i.."\n")
           
           local retval, track_chunk = reaper.GetTrackStateChunk(track, "", false)
           local fx_chunk = ultraschall.GetFXStateChunk(track_chunk)
@@ -73,7 +71,7 @@ function SetParams()
           if not success then
             success2, altered_fx_chunk = ultraschall.SetParmAlias_FXStateChunk(fx_chunk, current_fx_index + 1, i, value)
             if not success2 then
-              reaper.ShowConsoleMsg("Failed in SetParams for: "..i.."\n")
+              --reaper.ShowConsoleMsg("Failed in SetParams for: "..i.."\n")
             end
           end
           
@@ -87,7 +85,7 @@ function SetParams()
 end
 
 function ResetParams()
-  reaper.ShowConsoleMsg("RESET PARAMS\n")
+  --reaper.ShowConsoleMsg("RESET PARAMS\n")
   
   for i = num_params, 1, -1 do
   
@@ -97,12 +95,12 @@ function ResetParams()
     local parm_idx, alias_name = ultraschall.GetParmAlias_FXStateChunk(fx_chunk, current_fx_index + 1, i)
   
     if parm_idx ~= nil then
-      reaper.ShowConsoleMsg("removing alias: "..parm_idx..", name: "..alias_name..", i: "..i.."\n")
+      --reaper.ShowConsoleMsg("removing alias: "..parm_idx..", name: "..alias_name..", i: "..i.."\n")
       
       
       retval, new_fx_chunk = ultraschall.DeleteParmAlias_FXStateChunk(fx_chunk, current_fx_index + 1, i)
       if not retval then
-        reaper.ShowConsoleMsg("Failed to delete: "..i.."\n")
+        --reaper.ShowConsoleMsg("Failed to delete: "..i.."\n")
       end
         
       local retval, new_track_chunk = ultraschall.SetFXStateChunk(track_chunk, new_fx_chunk)
@@ -127,7 +125,7 @@ function CheckSettings()
   end
  
   if settings[current_fx][current_preset] == nil then
-    reaper.ShowConsoleMsg("SETTING DEFAULTS FOR THIS PRESET\n")
+    --reaper.ShowConsoleMsg("SETTING DEFAULTS FOR THIS PRESET\n")
     settings[current_fx][current_preset] = {}
     ResetParams()
     for i = 1, num_params do
@@ -145,7 +143,7 @@ end
 function OnExit() 
   local json_settings_string = json.encode(settings)
   reaper.SetExtState(stored_section_name, stored_settings_key, json_settings_string, true)
-  reaper.ShowConsoleMsg("EXIT\n")
+  --reaper.ShowConsoleMsg("EXIT\n")
 end
 reaper.atexit(OnExit)
 
@@ -180,7 +178,7 @@ function ButtonApply_Run()
 end
 
 function ButtonReset_Run()
-  reaper.ShowConsoleMsg("RESET DATABASE!\n")
+  --reaper.ShowConsoleMsg("RESET DATABASE!\n")
   ResetParams()
   settings = {}
   input_ids = {}
@@ -218,7 +216,7 @@ function main()
     if last_values[1] ~= current_track_name or 
     last_values[2] ~= current_fx_index or 
     last_values[3] ~= current_preset_index then
-      reaper.ShowConsoleMsg("New Config.\n")
+      --reaper.ShowConsoleMsg("New Config.\n")
       
       CheckSettings()
       
